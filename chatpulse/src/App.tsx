@@ -4,6 +4,7 @@ import { AppProvider, useApp } from './store/AppContext';
 import { SideNavBar } from './components/SideNavBar';
 import { NewChatModal } from './components/NewChatModal';
 import { Home } from './pages/Home';
+import { SavedPosts } from './pages/SavedPosts';
 import { Messages } from './pages/Messages';
 import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
@@ -67,6 +68,7 @@ export default function App() {
           {/* Protected Dashboard Routes */}
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Home />} />
+            <Route path="saved" element={<SavedPosts />} />
             <Route path="messages" element={<Messages />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="profile" element={<Profile />} />

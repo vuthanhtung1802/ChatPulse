@@ -26,10 +26,27 @@ export class Post {
   images: string[];
 
   @Prop({
+    default: "",
+  })
+  mood: string;
+
+  @Prop({
     type: [{ type: Types.ObjectId, ref: "User" }],
     default: [],
   })
   likes: Types.ObjectId[];
+
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: "User" }],
+    default: [],
+  })
+  hiddenBy: Types.ObjectId[];
+
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: "User" }],
+    default: [],
+  })
+  savedBy: Types.ObjectId[];
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

@@ -213,13 +213,23 @@ export const postService = {
     return response.data;
   },
 
-  async createPost(content: string, images?: string[]) {
-    const response = await apiClient.post(`${API_URL}/posts`, { content, images });
+  async createPost(content: string, images?: string[], mood?: string) {
+    const response = await apiClient.post(`${API_URL}/posts`, { content, images, mood });
     return response.data;
   },
 
   async toggleLikePost(postId: string) {
     const response = await apiClient.post(`${API_URL}/posts/${postId}/like`);
+    return response.data;
+  },
+
+  async toggleSavePost(postId: string) {
+    const response = await apiClient.post(`${API_URL}/posts/${postId}/save`);
+    return response.data;
+  },
+
+  async getSavedPosts(page = 1, limit = 10) {
+    const response = await apiClient.get(`${API_URL}/posts/saved?page=${page}&limit=${limit}`);
     return response.data;
   },
 

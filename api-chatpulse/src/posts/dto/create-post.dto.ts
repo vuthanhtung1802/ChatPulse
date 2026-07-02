@@ -9,4 +9,8 @@ export class CreatePostDto {
   @IsArray()
   @IsString({ each: true })
   images?: string[];
+
+  @IsOptional()
+  @IsString()
+  mood?: string;
 }

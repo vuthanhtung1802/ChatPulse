@@ -44,26 +44,53 @@ export class PostsController {
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
+    const userId = req.user._id.toString();
 
-    const result = await this.postsService.findAll(pageNum, limitNum);
+    const result = await this.postsService.findAll(pageNum, limitNum, userId);
 
-    const postsWithLikedByMe = result.posts.map((post) => {
+    const postsWithMeta = result.posts.map((post) => {
       const postObj = post.toObject();
-      const userId = req.user._id.toString();
       return {
         ...postObj,
         likedByMe: post.likes.some((id) => id.toString() === userId),
+        savedByMe: post.savedBy.some((id) => id.toString() === userId),
         commentsCount: 0,
         shares: 0,
       };
     });
 
     return {
-      posts: postsWithLikedByMe,
+      posts: postsWithMeta,
       total: result.total,
       page: result.page,
       limit: result.limit,
     };
+  }
+
+  @Get("saved")
+  async findSaved(
+    @Request() req,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    const userId = req.user._id.toString();
+
+    const result = await this.postsService.findSavedPosts(userId, pageNum, limitNum);
+
+    const postsWithMeta = result.posts.map((post) => {
+      const postObj = post.toObject();
+      return {
+        ...postObj,
+        likedByMe: post.likes.some((id) => id.toString() === userId),
+        savedByMe: true,
+        commentsCount: 0,
+        shares: 0,
+      };
+    });
+
+    return { posts: postsWithMeta, total: result.total };
   }
 
   @Get(":id")
@@ -74,6 +101,7 @@ export class PostsController {
       post: {
         ...post.toObject(),
         likedByMe: post.likes.some((l) => l.toString() === userId),
+        savedByMe: post.savedBy.some((l) => l.toString() === userId),
         commentsCount: 0,
         shares: 0,
       },
@@ -89,21 +117,22 @@ export class PostsController {
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
+    const currentUserId = req.user._id.toString();
 
-    const result = await this.postsService.findByUser(userId, pageNum, limitNum);
+    const result = await this.postsService.findByUser(userId, pageNum, limitNum, currentUserId);
 
-    const postsWithLikedByMe = result.posts.map((post) => {
+    const postsWithMeta = result.posts.map((post) => {
       const postObj = post.toObject();
-      const currentUserId = req.user._id.toString();
       return {
         ...postObj,
         likedByMe: post.likes.some((id) => id.toString() === currentUserId),
+        savedByMe: post.savedBy.some((id) => id.toString() === currentUserId),
         commentsCount: 0,
         shares: 0,
       };
     });
 
-    return { posts: postsWithLikedByMe, total: result.total };
+    return { posts: postsWithMeta, total: result.total };
   }
 
   @Post(":id/like")
@@ -117,6 +146,25 @@ export class PostsController {
       post: {
         ...post.toObject(),
         likedByMe: post.likes.some((l) => l.toString() === userId),
+        savedByMe: post.savedBy.some((l) => l.toString() === userId),
+        commentsCount: 0,
+        shares: 0,
+      },
+    };
+  }
+
+  @Post(":id/save")
+  async toggleSave(@Param("id") id: string, @Request() req) {
+    const post = await this.postsService.toggleSave(
+      id,
+      req.user._id.toString(),
+    );
+    const userId = req.user._id.toString();
+    return {
+      post: {
+        ...post.toObject(),
+        likedByMe: post.likes.some((l) => l.toString() === userId),
+        savedByMe: post.savedBy.some((l) => l.toString() === userId),
         commentsCount: 0,
         shares: 0,
       },
@@ -125,12 +173,12 @@ export class PostsController {
 
   @Delete(":id")
   async delete(@Param("id") id: string, @Request() req) {
-    await this.postsService.delete(
+    const result = await this.postsService.delete(
       id,
       req.user._id.toString(),
       req.user.role,
     );
-    return { success: true };
+    return { success: true, deleted: result.deleted };
   }
 
   @Post("upload")

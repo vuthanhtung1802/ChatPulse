@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../store/AppContext';
 import { postService } from '../services/api';
@@ -14,7 +14,10 @@ import {
   Bookmark,
   MoreHorizontal,
   X,
-  Loader2
+  Loader2,
+  Trash2,
+  EyeOff,
+  BookmarkCheck
 } from 'lucide-react';
 
 const containerVariants = {
@@ -63,24 +66,25 @@ const SkeletonCard: React.FC = () => (
 );
 
 export const Home: React.FC = () => {
-  const { posts, postsLoading, toggleLikePost, createPost, currentUser } = useApp();
+  const { posts, postsLoading, toggleLikePost, toggleSavePost, hidePost, createPost, currentUser } = useApp();
   const [postText, setPostText] = useState('');
-  const [selectedMood, setSelectedMood] = useState('Feeling focused 🧠');
+  const [selectedMood, setSelectedMood] = useState('');
   const [showMoodMenu, setShowMoodMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const moods = [
-    'Feeling focused 🧠',
-    'Creative mode 🎨',
-    'Coffee-fueled ☕',
-    'Celebrating 🚀',
-    'Productive day 💻',
-    'Chilled out 🌅'
-  ];
+ const moods = [
+  'Feeling happy 😊',
+  'Feeling loved ❤️',
+  'Feeling excited 🤩',
+  'Feeling sad 😢',
+  'Feeling grateful 🙌'
+];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -117,12 +121,22 @@ export const Home: React.FC = () => {
       setUploadingImages(false);
     }
 
-    await createPost(postText, imageUrls);
+    await createPost(postText, imageUrls, selectedMood || undefined);
     setPostText('');
     setSelectedFiles([]);
     previewUrls.forEach((url) => URL.revokeObjectURL(url));
     setPreviewUrls([]);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuPostId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatTime = (createdAt: string) => {
     const date = new Date(createdAt);
@@ -344,24 +358,73 @@ export const Home: React.FC = () => {
                           />
                           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-secondary border-2 border-surface-container-lowest rounded-full"></div>
                         </div>
-                        <div>
+                          <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="font-display font-bold text-sm text-on-surface">{post.author.name}</h4>
                             <span className="text-[9px] font-bold text-primary bg-primary-container/40 px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
                               Pro
                             </span>
                           </div>
+                          {post.mood && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-[11px] text-amber-600 dark:text-amber-400 font-medium"
+                            >
+                              is feeling {post.mood}
+                            </motion.p>
+                          )}
                           <p className="text-xs text-on-surface-variant opacity-85">{formatTime(post.createdAt)}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
-                          <Bookmark size={15} />
+                      <div className="flex items-center gap-2 relative">
+                        <button
+                          onClick={() => toggleSavePost(post._id)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            post.savedByMe
+                              ? 'text-primary bg-primary-container/20'
+                              : 'text-on-surface-variant hover:bg-surface-container-high'
+                          }`}
+                        >
+                          {post.savedByMe ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
                         </button>
-                        <button className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
+                        <button
+                          onClick={() => setOpenMenuPostId(openMenuPostId === post._id ? null : post._id)}
+                          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+                        >
                           <MoreHorizontal size={15} />
                         </button>
+                        {openMenuPostId === post._id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute top-full right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-xl p-1.5 shadow-lg z-20 w-44"
+                          >
+                            {currentUser && (post.author._id === currentUser.id || currentUser.role === 'admin') ? (
+                              <button
+                                onClick={async () => {
+                                  await hidePost(post._id);
+                                  setOpenMenuPostId(null);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-error font-medium hover:bg-error-container/30 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Trash2 size={14} />
+                                <span>Xóa bài viết</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  await hidePost(post._id);
+                                  setOpenMenuPostId(null);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface font-medium hover:bg-surface-container-high rounded-lg transition-colors cursor-pointer"
+                              >
+                                <EyeOff size={14} />
+                                <span>Ẩn bài viết</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 

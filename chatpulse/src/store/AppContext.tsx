@@ -33,8 +33,13 @@ interface AppContextType {
   createConversation: (participantId: string) => Promise<string>;
   createGroupConversation: (groupName: string, participantIds: string[]) => Promise<string>;
   postsLoading: boolean;
+  savedPosts: Post[];
+  savedPostsLoading: boolean;
   toggleLikePost: (postId: string) => Promise<void>;
-  createPost: (content: string, images?: string[]) => Promise<void>;
+  toggleSavePost: (postId: string) => Promise<void>;
+  hidePost: (postId: string) => Promise<void>;
+  createPost: (content: string, images?: string[], mood?: string) => Promise<void>;
+  fetchSavedPosts: () => Promise<void>;
   markNotificationsAsRead: () => void;
 }
 
@@ -121,6 +126,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedPostsLoading, setSavedPostsLoading] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activeConversationId, setActiveConversationId] = useState<string>('');
@@ -522,16 +529,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             p._id === postId ? { ...p, ...data.post } : p
           )
         );
+        setSavedPosts((prev) =>
+          prev.map((p) =>
+            p._id === postId ? { ...p, ...data.post } : p
+          )
+        );
       }
     } catch (err) {
       console.error('Error toggling like', err);
     }
   };
 
-  const createPost = async (content: string, images?: string[]) => {
+  const toggleSavePost = async (postId: string) => {
+    try {
+      const data = await postService.toggleSavePost(postId);
+      if (data.post) {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._id === postId ? { ...p, ...data.post } : p
+          )
+        );
+        setSavedPosts((prev) => {
+          const updated = prev.map((p) =>
+            p._id === postId ? { ...p, ...data.post } : p
+          );
+          if (data.post.savedByMe) {
+            const exists = prev.some((p) => p._id === postId);
+            if (!exists) {
+              const source = posts.find((p) => p._id === postId);
+              if (source) return [...updated, { ...source, ...data.post }];
+            }
+          }
+          return updated.filter((p) => p.savedByMe !== false);
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling save', err);
+    }
+  };
+
+  const hidePost = async (postId: string) => {
+    try {
+      await postService.deletePost(postId);
+      setPosts((prev) => prev.filter((p) => p._id !== postId));
+      setSavedPosts((prev) => prev.filter((p) => p._id !== postId));
+    } catch (err) {
+      console.error('Error hiding post', err);
+    }
+  };
+
+  const fetchSavedPosts = async () => {
+    setSavedPostsLoading(true);
+    try {
+      const data = await postService.getSavedPosts();
+      setSavedPosts(data.posts || []);
+    } catch (err) {
+      console.error('Error fetching saved posts', err);
+    } finally {
+      setSavedPostsLoading(false);
+    }
+  };
+
+  const createPost = async (content: string, images?: string[], mood?: string) => {
     if (!currentUser) return;
     try {
-      const data = await postService.createPost(content, images);
+      const data = await postService.createPost(content, images, mood);
       if (data.post) {
         setPosts((prev) => [data.post, ...prev]);
       }
@@ -552,6 +614,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         messages,
         posts,
         postsLoading,
+        savedPosts,
+        savedPostsLoading,
         notifications,
         theme,
         activeConversationId,
@@ -568,7 +632,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createConversation,
         createGroupConversation,
         toggleLikePost,
+        toggleSavePost,
+        hidePost,
         createPost,
+        fetchSavedPosts,
         markNotificationsAsRead
       }}
     >

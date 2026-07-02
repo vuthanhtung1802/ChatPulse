@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
@@ -22,6 +21,7 @@ export class PostsService {
       author: userId,
       content: createPostDto.content || "",
       images: createPostDto.images || [],
+      mood: createPostDto.mood || "",
     });
     const saved = await post.save();
     return saved.populate("author", "name avatar");
@@ -30,17 +30,22 @@ export class PostsService {
   async findAll(
     page: number = 1,
     limit: number = 10,
+    currentUserId?: string,
   ): Promise<{ posts: PostDocument[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
+    const filter: any = {};
+    if (currentUserId) {
+      filter.hiddenBy = { $ne: currentUserId };
+    }
     const [posts, total] = await Promise.all([
       this.postModel
-        .find()
+        .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate("author", "name avatar email")
         .exec(),
-      this.postModel.countDocuments().exec(),
+      this.postModel.countDocuments(filter).exec(),
     ]);
     return { posts, total, page, limit };
   }
@@ -60,17 +65,22 @@ export class PostsService {
     userId: string,
     page: number = 1,
     limit: number = 10,
+    currentUserId?: string,
   ): Promise<{ posts: PostDocument[]; total: number }> {
     const skip = (page - 1) * limit;
+    const filter: any = { author: userId };
+    if (currentUserId) {
+      filter.hiddenBy = { $ne: currentUserId };
+    }
     const [posts, total] = await Promise.all([
       this.postModel
-        .find({ author: userId })
+        .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate("author", "name avatar email")
         .exec(),
-      this.postModel.countDocuments({ author: userId }).exec(),
+      this.postModel.countDocuments(filter).exec(),
     ]);
     return { posts, total };
   }
@@ -105,7 +115,57 @@ export class PostsService {
       .exec();
   }
 
-  async delete(postId: string, userId: string, userRole: string): Promise<void> {
+  async toggleSave(
+    postId: string,
+    userId: string,
+  ): Promise<PostDocument> {
+    const post = await this.postModel.findById(postId).exec();
+    if (!post) {
+      throw new NotFoundException("Post not found");
+    }
+
+    const userIdStr = userId.toString();
+    const isSaved = post.savedBy.some(
+      (id) => id.toString() === userIdStr,
+    );
+
+    if (isSaved) {
+      await this.postModel
+        .findByIdAndUpdate(postId, { $pull: { savedBy: userId } })
+        .exec();
+    } else {
+      await this.postModel
+        .findByIdAndUpdate(postId, { $push: { savedBy: userId } })
+        .exec();
+    }
+
+    return this.postModel
+      .findById(postId)
+      .populate("author", "name avatar email")
+      .exec();
+  }
+
+  async findSavedPosts(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ posts: PostDocument[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const filter = { savedBy: userId };
+    const [posts, total] = await Promise.all([
+      this.postModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("author", "name avatar email")
+        .exec(),
+      this.postModel.countDocuments(filter).exec(),
+    ]);
+    return { posts, total };
+  }
+
+  async delete(postId: string, userId: string, userRole: string): Promise<{ deleted: boolean }> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) {
       throw new NotFoundException("Post not found");
@@ -114,12 +174,14 @@ export class PostsService {
     const isAuthor = post.author.toString() === userId;
     const isAdmin = userRole === "admin";
 
-    if (!isAuthor && !isAdmin) {
-      throw new ForbiddenException(
-        "You can only delete your own posts",
-      );
+    if (isAuthor || isAdmin) {
+      await this.postModel.findByIdAndDelete(postId).exec();
+      return { deleted: true };
     }
 
-    await this.postModel.findByIdAndDelete(postId).exec();
+    await this.postModel
+      .findByIdAndUpdate(postId, { $addToSet: { hiddenBy: userId } })
+      .exec();
+    return { deleted: false };
   }
 }

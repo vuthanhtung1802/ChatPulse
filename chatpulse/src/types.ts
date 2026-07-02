@@ -1,8 +1,10 @@
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   avatar: string;
+  role: string;
   plan: string;
   status: 'online' | 'offline' | 'typing';
   bio?: string;
@@ -48,9 +50,13 @@ export interface Post {
   content: string;
   images: string[];
   likes: string[];
+  hiddenBy?: string[];
+  savedBy?: string[];
   createdAt: string;
   updatedAt: string;
+  mood?: string;
   likedByMe?: boolean;
+  savedByMe?: boolean;
   commentsCount?: number;
   shares?: number;
 }

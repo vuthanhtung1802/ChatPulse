@@ -6,6 +6,7 @@ import {
   MessageSquare, 
   Bell, 
   User as UserIcon, 
+  Bookmark,
   Plus, 
   LogOut, 
   Sun, 
@@ -33,6 +34,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
 
   const navItems = [
     { to: '/', label: 'Feed', icon: Home, badge: 0 },
+    { to: '/saved', label: 'Saved', icon: Bookmark, badge: 0 },
     { to: '/messages', label: 'Messages', icon: MessageSquare, badge: unreadMessagesCount },
     { to: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount },
     { to: '/profile', label: 'Profile', icon: UserIcon, badge: 0 },
