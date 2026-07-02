@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -51,8 +52,16 @@ export class ChatController {
   }
 
   @Get(":id/messages")
-  async getMessages(@Param("id") conversationId: string) {
-    return this.chatService.getMessagesForConversation(conversationId);
+  async getMessages(
+    @Param("id") conversationId: string,
+    @Request() req,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    const userId = req.user._id.toString();
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return this.chatService.getMessagesForConversation(conversationId, userId, pageNum, limitNum);
   }
 
   @Get(":id")
@@ -68,5 +77,17 @@ export class ChatController {
   async deleteConversation(@Param("id") id: string, @Request() req) {
     await this.chatService.deleteConversation(id, req.user._id.toString());
     return { success: true };
+  }
+
+  @Delete("messages/:messageId")
+  async deleteMessage(@Param("messageId") messageId: string, @Request() req) {
+    await this.chatService.deleteMessage(messageId, req.user._id.toString());
+    return { success: true };
+  }
+
+  @Post("messages/:messageId/recall")
+  async recallMessage(@Param("messageId") messageId: string, @Request() req) {
+    const message = await this.chatService.recallMessage(messageId, req.user._id.toString());
+    return { success: true, message };
   }
 }

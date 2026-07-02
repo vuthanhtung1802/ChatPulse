@@ -96,6 +96,22 @@ export class UsersController {
     };
   }
 
+  @Post("upload")
+  @UseInterceptors(FileInterceptor("file"))
+  async uploadFile(@UploadedFile() file: any) {
+    if (!file) {
+      throw new BadRequestException("File is required");
+    }
+    const uploadResult = await this.cloudinaryService.uploadFile(file);
+    if (!uploadResult || !uploadResult.secure_url) {
+      throw new BadRequestException("Failed to upload file to Cloudinary");
+    }
+    return {
+      url: uploadResult.secure_url,
+      type: file.mimetype && file.mimetype.startsWith("image/") ? "image" : "video",
+    };
+  }
+
   @Get(":id")
   async findOne(@Param("id") id: string) {
     const user = await this.usersService.findById(id);

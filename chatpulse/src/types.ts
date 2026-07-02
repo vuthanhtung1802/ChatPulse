@@ -15,6 +15,7 @@ export interface User {
 
 export interface Conversation {
   id: string;
+  participantId?: string;
   participantName: string;
   participantAvatar: string;
   participantStatus: 'online' | 'offline' | 'typing';
@@ -38,14 +39,18 @@ export interface Message {
 }
 
 export interface Post {
-  id: string;
-  authorName: string;
-  authorAvatar: string;
+  _id: string;
+  author: {
+    _id: string;
+    name: string;
+    avatar: string;
+  };
   content: string;
-  timestamp: string;
-  likes: number;
-  commentsCount: number;
-  shares: number;
+  images: string[];
+  likes: string[];
+  createdAt: string;
+  updatedAt: string;
   likedByMe?: boolean;
-  images?: string[];
+  commentsCount?: number;
+  shares?: number;
 }

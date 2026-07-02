@@ -16,8 +16,10 @@ import {
   X,
   Sparkles,
   PhoneOff,
-  UserCheck
+  UserCheck,
+  Trash
 } from 'lucide-react';
+import { userService } from '../services/api';
 
 export const Messages: React.FC = () => {
   const { 
@@ -26,11 +28,15 @@ export const Messages: React.FC = () => {
     activeConversationId, 
     setActiveConversationId, 
     sendMessage, 
+    recallMessage,
+    sendTypingStatus,
     isTyping, 
     currentUser 
   } = useApp();
 
   const [inputText, setInputText] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
@@ -72,14 +78,39 @@ export const Messages: React.FC = () => {
   const handleSendAttachment = (type: 'image' | 'file') => {
     setShowAttachmentMenu(false);
     if (type === 'image') {
+      fileInputRef.current?.click();
+    } else {
+      sendMessage("Shared document checklist.pdf", undefined, undefined);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const res = await userService.uploadFile(file);
       sendMessage(
-        "Attached a prototype reference mockup", 
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCnYIVfCTrvlQXscXxkWOWBVt4KCWXsJ-ZnZP4NH5saJh8F__l_N0WqtrvPOg_G6STjYZn3b711v2nE_g8qFhtV-1jrXXA_HJy4XqIB9Gq_M4Gc9xKdIDIhhfrBa6dwc2YnkLRzDRGGeWWBdB0D0tzpQn2oPsJDMePGqr-U-rHUqI2K1wnEp5Mwztqf34eyzjXI2QWbws3_rvO9nMohrZ6dwwUtXptWEKumY9LBSOpygE4-ysn64sLlJdXmtkc0Ex0bbhsDzR7OfLw",
+        "Gửi một ảnh đính kèm",
+        res.url,
         "image"
       );
-    } else {
-      sendMessage("Shared document checklist.pdf");
+    } catch (err) {
+      console.error('Failed to upload image', err);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputText(e.target.value);
+    sendTypingStatus(true);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 1500);
   };
 
   const formatDuration = (sec: number) => {
@@ -284,38 +315,49 @@ export const Messages: React.FC = () => {
                     </span>
                   )}
                   
-                  <div className={`p-3.5 rounded-2xl relative shadow-xs leading-relaxed text-sm ${
-                    isSelf 
-                      ? 'bg-primary text-on-primary rounded-br-xs' 
-                      : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
-                  }`}>
-                    
-                    {/* Plain Text Message */}
-                    {msg.text && <p className="font-sans font-medium">{msg.text}</p>}
-
-                    {/* High Fidelity image attachments (e.g. proto designs) */}
-                    {msg.attachmentUrl && msg.attachmentType === 'image' && (
-                      <div className="mt-2 rounded-xl overflow-hidden border border-outline-variant/40 max-w-sm">
-                        <img 
-                          src={msg.attachmentUrl} 
-                          alt="Attachment File" 
-                          referrerPolicy="no-referrer"
-                          className="w-full object-cover max-h-56 cursor-pointer hover:scale-102 transition-transform duration-300"
-                          onClick={() => window.open(msg.attachmentUrl, '_blank')}
-                        />
-                      </div>
-                    )}
-
-                    {/* Micro-indicators */}
-                    <div className={`flex items-center justify-end gap-1 text-[9px] mt-1.5 opacity-70 ${
-                      isSelf ? 'text-on-primary/80' : 'text-on-surface-variant/80'
+                  <div className="relative group/msg max-w-full">
+                    <div className={`p-3.5 rounded-2xl relative shadow-xs leading-relaxed text-sm ${
+                      isSelf 
+                        ? 'bg-primary text-on-primary rounded-br-xs' 
+                        : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
                     }`}>
-                      <span>{msg.timestamp}</span>
-                      {isSelf && (
-                        <CheckCheck size={11} className="text-secondary" />
-                      )}
-                    </div>
+                      
+                      {/* Plain Text Message */}
+                      {msg.text && <p className="font-sans font-medium">{msg.text}</p>}
 
+                      {/* High Fidelity image attachments (e.g. proto designs) */}
+                      {msg.attachmentUrl && msg.attachmentType === 'image' && (
+                        <div className="mt-2 rounded-xl overflow-hidden border border-outline-variant/40 max-w-sm">
+                          <img 
+                            src={msg.attachmentUrl} 
+                            alt="Attachment File" 
+                            referrerPolicy="no-referrer"
+                            className="w-full object-cover max-h-56 cursor-pointer hover:scale-102 transition-transform duration-300"
+                            onClick={() => window.open(msg.attachmentUrl, '_blank')}
+                          />
+                        </div>
+                      )}
+
+                      {/* Micro-indicators */}
+                      <div className={`flex items-center justify-end gap-1 text-[9px] mt-1.5 opacity-70 ${
+                        isSelf ? 'text-on-primary/80' : 'text-on-surface-variant/80'
+                      }`}>
+                        <span>{msg.timestamp}</span>
+                        {isSelf && (
+                          <CheckCheck size={11} className="text-secondary" />
+                        )}
+                      </div>
+
+                    </div>
+                    {isSelf && msg.text !== 'Tin nhắn đã bị thu hồi' && (
+                      <button
+                        onClick={() => recallMessage(msg.id)}
+                        className="absolute top-1/2 -translate-y-1/2 -left-8 opacity-0 group-hover/msg:opacity-100 p-1 text-on-surface-variant hover:text-error transition-all duration-150 cursor-pointer"
+                        title="Recall Message"
+                      >
+                        <Trash size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -377,9 +419,16 @@ export const Messages: React.FC = () => {
             <input
               type="text"
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={handleInputChange}
               placeholder={`Write your message to ${activeConv?.participantName || 'coworker'}...`}
               className="flex-1 px-4 py-3 bg-surface-container-low border border-outline-variant/60 rounded-xl text-sm focus:outline-hidden focus:border-primary text-on-surface placeholder:text-on-surface-variant/40"
+            />
+            <input 
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
             />
 
             <button

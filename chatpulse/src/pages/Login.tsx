@@ -4,7 +4,7 @@ import { useApp } from '../store/AppContext';
 import { Mail, Lock, LogIn, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login } = useApp();
+  const { login, signup } = useApp();
   const navigate = useNavigate();
   const [email, setEmail] = useState('alex.rivera@chatpulse.io');
   const [password, setPassword] = useState('password123');
@@ -20,7 +20,7 @@ export const Login: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      const success = await login(email);
+      const success = await login(email, password);
       if (success) {
         navigate('/');
       } else {
@@ -37,7 +37,12 @@ export const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      await login(`${provider.toLowerCase()}@chatpulse.io`, `${provider} User`);
+      const email = `${provider.toLowerCase()}@chatpulse.io`;
+      const name = `${provider} User`;
+      const success = await login(email, 'password123');
+      if (!success) {
+        await signup(name, email, 'password123');
+      }
       navigate('/');
     } catch (err) {
       setError('Social authentication failed.');

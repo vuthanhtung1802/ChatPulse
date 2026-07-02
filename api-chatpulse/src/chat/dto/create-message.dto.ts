@@ -1,11 +1,19 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class CreateMessageDto {
   @IsNotEmpty()
   @IsString()
   conversationId: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  content: string;
+  content?: string;
+
+  @IsOptional()
+  @IsString()
+  attachmentUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  attachmentType?: string;
 }

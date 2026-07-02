@@ -7,45 +7,68 @@ interface NewChatModalProps {
   onClose: () => void;
 }
 
+import { userService } from '../services/api';
+
 export const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
-  const { conversations, setActiveConversationId, conversations: existingConvs } = useApp();
+  const { createConversation, createGroupConversation, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch contacts matching searchTerm
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchContacts = async () => {
+      setIsLoading(true);
+      try {
+        const users = await userService.searchUsers(searchTerm);
+        // Exclude self from contact list
+        const filtered = users.filter((u: any) => u._id !== currentUser?.id);
+        setContacts(filtered);
+      } catch (err) {
+        console.error('Failed to search users', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const delayDebounce = setTimeout(() => {
+      fetchContacts();
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, isOpen, currentUser]);
 
   if (!isOpen) return null;
 
-  const availableContacts = [
-    { id: 'elena', name: 'Elena Vance', role: 'UI/UX Designer', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDt7EFtAsZPCycU-ePdnOLysMhbQRF_oMrKyyo8uwbiD6w3fS1oGU4WtmVqCe44eqgFwDVn-6pL_o1GtGfnpaf3Zph8ySHusHyHJEdFOjVi7qLzKI8leuIIex39B219txtgjJrxifI4jniKeIg8MJZIyBkDqlEgwwj_Arb2-HI0BJ1A-aizNCA_8ngNuIZR_VwU4mrSqLrf9ti9S6Wpv-RJVL1hC35S2PhpxHlFq24mTosLOLa5rtHVLCtlIPoS-iK8__WAu7c0TEE' },
-    { id: 'marcus', name: 'Marcus Thorne', role: 'Product Manager', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHaJs_RPltgdqmC61JbBAXsk61mQwwkune9oT7F7mQqcEC_aLK_iW99C7uk4LubMOJft66n8Jgsukv28ILEYn-g8CN9ZyJ0ZmXyquUz5uToIgGoY88K_A1t0XVugCNjFFtFxHW_B7oA6HR17qmSaEhGn4jB6c7__bdkzIKGu41kHBDES0EbA0DFb5bgXxEm3Kux2uFDzEnmUmhXbi7cIP5XJK-wlF_Dn1eOfZFlI-G5b_j_0PPOQJ_FRLu81F8e-jlUVIDVck8Gyc' },
-    { id: 'jordan', name: 'Jordan Smith', role: 'Full Stack Engineer', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD8A-lS1fFnvIj3W8ETIauA_VASFxM7EU7MYpcjyaKH9wMCXh9dBCLBGk_Ij3QWY-UqpW3zoT16iCnZPwQ58x98aSMiSYBOEhPDT8jzpjvbzC2YCxbcEspM8DFxvpMunCgwYO3GKEpu1GptHCD2Fp3pvCRDmbvi7ZCobq2XoTY3VaieNRqMf7f7GKFw3k0V-0Fyd_-Bkk4jZTkYdmITaTdiR75Hdk5YZs_ZfecYwMzjgyLFBvRrVR44fu8CnJ1rKs0WlmOtXphWpOs' },
-    { id: 'sarah-chen', name: 'Sarah Chen', role: 'Lead Brand Strategist', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBKK07WxjOfJoYrGXfV3-adymye2qfhbOaCN7X8ualM7dwKetVLupT4loCjTZjCft0ssVSjPD2YFVHyyNX9WYfP2JFpuEfmS2B2febjGIHLugCfq2_oaBYjDxEDFMPlur-0Ie6j5l6hqtCHqlFvLhpoBitbgyWPOrhSt9bi-Kn1GQhlwnrqaHf2Pexm4xLpFPSuUCyqmHdtyIOpeUvqmwIh1WrJ6adITgyuiTcWd4ljE6819Xa1p9OkpG1CaQBo504GjHd_P5y-D1s' },
-  ];
-
-  const filteredContacts = availableContacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSelectContact = (id: string) => {
+  const handleSelectContact = async (id: string) => {
     if (isGroupChat) {
       setSelectedContacts(prev =>
         prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
       );
     } else {
-      // Find or switch to single conversation
-      setActiveConversationId(id);
-      onClose();
+      try {
+        await createConversation(id);
+        onClose();
+      } catch (err) {
+        console.error('Failed to start conversation', err);
+      }
     }
   };
 
-  const handleCreateChat = () => {
+  const handleCreateChat = async () => {
     if (isGroupChat) {
-      if (!groupName.trim()) return;
-      // In a real app we'd add to conversation list, but we can simulate switching
-      setActiveConversationId('design-team'); // switch to the existing mock design-team group chat
-      onClose();
+      if (!groupName.trim() || selectedContacts.length === 0) return;
+      try {
+        await createGroupConversation(groupName.trim(), selectedContacts);
+        onClose();
+      } catch (err) {
+        console.error('Failed to start group conversation', err);
+      }
     }
   };
 
@@ -123,18 +146,24 @@ export const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) =
           {/* Contacts list */}
           <div className="space-y-1">
             <h4 className="text-xs font-semibold text-on-surface-variant px-1 mb-2">Coworkers</h4>
-            {filteredContacts.length > 0 ? (
-              filteredContacts.map(contact => {
-                const isSelected = selectedContacts.includes(contact.id);
+            {isLoading ? (
+              <div className="text-center py-6 text-sm text-on-surface-variant/60">
+                Searching coworkers...
+              </div>
+            ) : contacts.length > 0 ? (
+              contacts.map(contact => {
+                const contactId = contact._id || contact.id;
+                const isSelected = selectedContacts.includes(contactId);
+                const avatarUrl = contact.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150';
                 return (
                   <button
-                    key={contact.id}
-                    onClick={() => handleSelectContact(contact.id)}
+                    key={contactId}
+                    onClick={() => handleSelectContact(contactId)}
                     className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container-high/60 transition-colors text-left cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={contact.avatar}
+                        src={avatarUrl}
                         alt={contact.name}
                         referrerPolicy="no-referrer"
                         className="w-10 h-10 rounded-xl object-cover"
@@ -144,7 +173,7 @@ export const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) =
                           {contact.name}
                         </div>
                         <div className="text-xs text-on-surface-variant opacity-80">
-                          {contact.role}
+                          {contact.email}
                         </div>
                       </div>
                     </div>

@@ -11,11 +11,12 @@ import { Server, Socket } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { ChatService } from "./chat.service";
+import { UsersService } from "../users/users.service";
 import { CreateMessageDto } from "./dto/create-message.dto";
 
 @WebSocketGateway({
   cors: {
-    origin: "*",
+    origin: true, // Allow all origins for development; adjust in production
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -26,6 +27,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly chatService: ChatService,
+    private readonly usersService: UsersService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -47,6 +49,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = payload.sub;
       client.data.email = payload.email;
 
+      // Update online status in database
+      await this.usersService.updateStatus(payload.sub, "online");
+
+      // Broadcast user online status change
+      this.server.emit("userStatusChanged", {
+        userId: payload.sub,
+        status: "online",
+      });
+
       console.log(
         `Socket Client Connected: ${client.id}, User: ${client.data.email}`,
       );
@@ -56,8 +67,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`Socket Client Disconnected: ${client.id}`);
+    const userId = client.data.userId;
+    if (userId) {
+      // Update offline status in database
+      await this.usersService.updateStatus(userId, "offline");
+
+      // Broadcast user offline status change
+      this.server.emit("userStatusChanged", {
+        userId,
+        status: "offline",
+      });
+    }
   }
 
   @SubscribeMessage("joinConversation")
@@ -86,12 +108,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() createMessageDto: CreateMessageDto,
   ) {
     const senderId = client.data.userId;
-    const { conversationId, content } = createMessageDto;
+    const { conversationId, content, attachmentUrl, attachmentType } = createMessageDto;
 
     const message = await this.chatService.createMessage(
       senderId,
       conversationId,
-      content,
+      content || "",
+      attachmentUrl || "",
+      attachmentType || "",
     );
 
     // Emit the new message to all clients in the conversation room
@@ -112,6 +136,43 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       userId: client.data.userId,
       email: client.data.email,
       isTyping,
+    });
+  }
+
+  @SubscribeMessage("seenConversation")
+  async handleSeenConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string },
+  ) {
+    const { conversationId } = data;
+    const userId = client.data.userId;
+    if (!userId || !conversationId) return;
+
+    await this.chatService.markConversationAsRead(conversationId, userId);
+
+    // Broadcast to others in the room that this user has seen the conversation
+    client.to(conversationId).emit("conversationSeen", {
+      conversationId,
+      userId,
+    });
+  }
+
+  @SubscribeMessage("recallMessage")
+  async handleRecallMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { messageId: string; conversationId: string },
+  ) {
+    const { messageId, conversationId } = data;
+    const userId = client.data.userId;
+    if (!userId || !messageId || !conversationId) return;
+
+    const message = await this.chatService.recallMessage(messageId, userId);
+
+    // Emit to everyone in the room that the message was recalled
+    this.server.to(conversationId).emit("messageRecalled", {
+      messageId,
+      conversationId,
+      message,
     });
   }
 }

@@ -24,9 +24,35 @@ export class Message {
   sender: Types.ObjectId;
 
   @Prop({
-    required: true,
+    default: "",
   })
   content: string;
+
+  @Prop({
+    default: "",
+  })
+  attachmentUrl: string;
+
+  @Prop({
+    default: "",
+  })
+  attachmentType: string;
+
+  @Prop({
+    default: "sent",
+  })
+  status: string;
+
+  @Prop({
+    default: false,
+  })
+  isRecalled: boolean;
+
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: "User" }],
+    default: [],
+  })
+  deletedBy: Types.ObjectId[];
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

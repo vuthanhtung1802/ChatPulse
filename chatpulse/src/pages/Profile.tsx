@@ -15,9 +15,11 @@ import {
   ShieldAlert,
   Award
 } from 'lucide-react';
+import { userService } from '../services/api';
 
 export const Profile: React.FC = () => {
   const { currentUser, updateProfile } = useApp();
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editName, setEditName] = useState(currentUser?.name || '');
@@ -50,6 +52,17 @@ export const Profile: React.FC = () => {
     setEditLocation(currentUser.location || '');
     setEditWebsite(currentUser.website || '');
     setIsEditModalOpen(true);
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const res = await userService.uploadAvatar(currentUser.id, file);
+      await updateProfile({ avatar: res.avatarUrl });
+    } catch (err) {
+      console.error('Failed to update avatar', err);
+    }
   };
 
   return (
@@ -90,12 +103,19 @@ export const Profile: React.FC = () => {
                 className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover border-4 border-surface-container-lowest shadow-lg bg-surface-container-lowest"
               />
               <button 
-                onClick={() => alert("Image upload is simulated in this presentation.")}
+                onClick={() => avatarInputRef.current?.click()}
                 className="absolute bottom-1 right-1 p-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-xs cursor-pointer"
                 title="Change Avatar"
               >
                 <Camera size={13} />
               </button>
+              <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarChange}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
             
             <div className="mb-2 space-y-1 select-none">

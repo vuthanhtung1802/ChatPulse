@@ -11,6 +11,7 @@ import {
 } from "./schemas/conversation.schema";
 import { Message, MessageSchema } from "./schemas/message.schema";
 import { AuthModule } from "../auth/auth.module";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from "../auth/auth.module";
       { name: Message.name, schema: MessageSchema },
     ]),
     AuthModule,
+    UsersModule,
     // Import JwtModule again to allow token verify inside gateway
     JwtModule.registerAsync({
       imports: [ConfigModule],

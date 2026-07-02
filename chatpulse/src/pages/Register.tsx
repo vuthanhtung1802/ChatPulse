@@ -27,7 +27,7 @@ export const Register: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      const success = await signup(name, email);
+      const success = await signup(name, email, password);
       if (success) {
         navigate('/');
       } else {

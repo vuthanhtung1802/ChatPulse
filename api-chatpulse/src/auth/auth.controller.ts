@@ -7,7 +7,9 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Res,
 } from "@nestjs/common";
+import { Response } from "express";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -38,17 +40,31 @@ export class AuthController {
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: false, // set to true in production if HTTPS is used
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    return result;
   }
 
   @UseGuards(JwtAuthGuard)
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  async logout(@Request() req, @Body() body?: { refreshToken?: string }) {
-    // If refreshToken is passed in the body, logout just that device.
-    // Otherwise fall back to trying to get the token or clearing all.
-    await this.authService.logout(req.user._id.toString(), body?.refreshToken);
+  async logout(
+    @Request() req,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body?: { refreshToken?: string },
+  ) {
+    const refreshToken = req.cookies?.refreshToken || body?.refreshToken;
+    await this.authService.logout(req.user._id.toString(), refreshToken);
+    res.clearCookie("refreshToken");
     return {
       message: "Logout successful",
     };
@@ -57,12 +73,23 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  async refresh(@Request() req, @Body() refreshTokenDto: RefreshTokenDto) {
+  async refresh(
+    @Request() req,
+    @Res({ passthrough: true }) res: Response,
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ) {
     const userId = req.user._id.toString();
+    const refreshToken = req.cookies?.refreshToken || refreshTokenDto.refreshToken;
     const tokens = await this.authService.refreshTokens(
       userId,
-      refreshTokenDto.refreshToken,
+      refreshToken,
     );
+    res.cookie("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     return tokens;
   }
 

@@ -1,6 +1,9 @@
+require("dotenv").config();
+
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
+import cookieParser = require("cookie-parser");
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -8,9 +11,12 @@ async function bootstrap() {
   // Set global prefix
   app.setGlobalPrefix("api");
 
+  // Enable cookie parser
+  app.use(cookieParser());
+
   // Enable CORS
   app.enableCors({
-    origin: "*", // You can customize this to allow only specific origins in production
+    origin: true, // Dynamically mirror origin, allowing credentials
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
   });
@@ -23,8 +29,8 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT || 8000;
+  const port = process.env.PORT;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Application is running on: http://localhost:${port}/api`);
 }
 bootstrap();

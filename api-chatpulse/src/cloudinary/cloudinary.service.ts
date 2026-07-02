@@ -5,9 +5,10 @@ import { Readable } from "stream";
 
 @Injectable()
 export class CloudinaryService {
-  async uploadFile(file: {
-    buffer: Buffer;
-  }): Promise<UploadApiResponse | UploadApiErrorResponse> {
+  async uploadFile(
+    file: { buffer: Buffer },
+    folder: string = "avatars",
+  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
     if (!file || !file.buffer) {
       throw new BadRequestException("No file provided");
     }
@@ -15,7 +16,7 @@ export class CloudinaryService {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: "avatars",
+          folder,
         },
         (error, result) => {
           if (error) return reject(error);
