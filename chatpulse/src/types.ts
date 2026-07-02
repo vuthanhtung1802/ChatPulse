@@ -40,6 +40,19 @@ export interface Message {
   attachmentType?: 'image' | 'video';
 }
 
+export interface Comment {
+  _id: string;
+  post: string;
+  author: {
+    _id: string;
+    name: string;
+    avatar: string;
+  };
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Post {
   _id: string;
   author: {

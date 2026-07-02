@@ -206,6 +206,24 @@ export const chatService = {
   },
 };
 
+// Comment Service
+export const commentService = {
+  async getComments(postId: string, page = 1, limit = 20) {
+    const response = await apiClient.get(`${API_URL}/posts/${postId}/comments?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+
+  async createComment(postId: string, content: string) {
+    const response = await apiClient.post(`${API_URL}/posts/${postId}/comments`, { content });
+    return response.data;
+  },
+
+  async deleteComment(postId: string, commentId: string) {
+    const response = await apiClient.delete(`${API_URL}/posts/${postId}/comments/${commentId}`);
+    return response.data;
+  },
+};
+
 // Post Service
 export const postService = {
   async getPosts(page = 1, limit = 10) {

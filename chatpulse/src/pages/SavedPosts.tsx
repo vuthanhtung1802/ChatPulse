@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../store/AppContext';
+import { CommentSection } from '../components/CommentSection';
 import {
   Heart,
   MessageCircle,
@@ -11,6 +12,7 @@ import {
   Loader2,
   Trash2,
   EyeOff,
+  Check,
 } from 'lucide-react';
 
 const containerVariants = {
@@ -59,10 +61,21 @@ const SkeletonCard: React.FC = () => (
 
 export const SavedPosts: React.FC = () => {
   const { savedPosts, savedPostsLoading, fetchSavedPosts, toggleSavePost, toggleLikePost, hidePost, currentUser } = useApp();
+  const [expandedComments, setExpandedComments] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     fetchSavedPosts();
   }, []);
+
+  useEffect(() => {
+    if (toast) {
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(null), 2000);
+    }
+    return () => clearTimeout(toastTimer.current);
+  }, [toast]);
 
   const formatTime = (createdAt: string) => {
     const date = new Date(createdAt);
@@ -239,12 +252,28 @@ export const SavedPosts: React.FC = () => {
                           <span>{post.likes?.length || 0}</span>
                         </motion.button>
 
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer">
+                        <button
+                          onClick={() => setExpandedComments(expandedComments === post._id ? null : post._id)}
+                          className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            expandedComments === post._id ? 'text-primary' : 'hover:text-primary'
+                          }`}
+                        >
                           <MessageCircle size={16} />
                           <span>{post.commentsCount || 0}</span>
                         </button>
 
-                        <button className="flex items-center gap-1.5 hover:text-secondary transition-colors cursor-pointer">
+                        <button
+                          onClick={async () => {
+                            const url = `${window.location.origin}/post/${post._id}`;
+                            try {
+                              await navigator.clipboard.writeText(url);
+                              setToast('Đã copy link bài viết');
+                            } catch {
+                              setToast('Không thể copy link');
+                            }
+                          }}
+                          className="flex items-center gap-1.5 hover:text-secondary transition-colors cursor-pointer"
+                        >
                           <Share2 size={16} />
                           <span>{post.shares || 0}</span>
                         </button>
@@ -274,6 +303,8 @@ export const SavedPosts: React.FC = () => {
                         </span>
                       </div>
                     </div>
+
+                    <CommentSection postId={post._id} isOpen={expandedComments === post._id} />
                   </motion.article>
                 ))
               ) : (
@@ -293,6 +324,20 @@ export const SavedPosts: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 bg-surface-container-highest border border-outline-variant rounded-xl shadow-lg flex items-center gap-2 z-50"
+          >
+            <Check size={16} className="text-secondary" />
+            <span className="text-xs font-medium text-on-surface">{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

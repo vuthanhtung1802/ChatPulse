@@ -15,6 +15,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { PostsService } from "./posts.service";
+import { CommentsService } from "./comments.service";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
@@ -24,8 +25,17 @@ import { CloudinaryService } from "../cloudinary/cloudinary.service";
 export class PostsController {
   constructor(
     private readonly postsService: PostsService,
+    private readonly commentsService: CommentsService,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  private async attachCommentsCount(posts: any[]): Promise<void> {
+    const postIds = posts.map((p) => p._id.toString());
+    const countsMap = await this.commentsService.countByPostIds(postIds);
+    for (const post of posts) {
+      post.commentsCount = countsMap.get(post._id.toString()) || 0;
+    }
+  }
 
   @Post()
   async create(@Request() req, @Body() createPostDto: CreatePostDto) {
@@ -59,6 +69,8 @@ export class PostsController {
       };
     });
 
+    await this.attachCommentsCount(postsWithMeta);
+
     return {
       posts: postsWithMeta,
       total: result.total,
@@ -90,6 +102,8 @@ export class PostsController {
       };
     });
 
+    await this.attachCommentsCount(postsWithMeta);
+
     return { posts: postsWithMeta, total: result.total };
   }
 
@@ -97,12 +111,13 @@ export class PostsController {
   async findOne(@Param("id") id: string, @Request() req) {
     const post = await this.postsService.findById(id);
     const userId = req.user._id.toString();
+    const commentsCount = await this.commentsService.countByPost(id);
     return {
       post: {
         ...post.toObject(),
         likedByMe: post.likes.some((l) => l.toString() === userId),
         savedByMe: post.savedBy.some((l) => l.toString() === userId),
-        commentsCount: 0,
+        commentsCount,
         shares: 0,
       },
     };
@@ -132,6 +147,8 @@ export class PostsController {
       };
     });
 
+    await this.attachCommentsCount(postsWithMeta);
+
     return { posts: postsWithMeta, total: result.total };
   }
 
@@ -142,12 +159,13 @@ export class PostsController {
       req.user._id.toString(),
     );
     const userId = req.user._id.toString();
+    const commentsCount = await this.commentsService.countByPost(id);
     return {
       post: {
         ...post.toObject(),
         likedByMe: post.likes.some((l) => l.toString() === userId),
         savedByMe: post.savedBy.some((l) => l.toString() === userId),
-        commentsCount: 0,
+        commentsCount,
         shares: 0,
       },
     };
@@ -160,12 +178,13 @@ export class PostsController {
       req.user._id.toString(),
     );
     const userId = req.user._id.toString();
+    const commentsCount = await this.commentsService.countByPost(id);
     return {
       post: {
         ...post.toObject(),
         likedByMe: post.likes.some((l) => l.toString() === userId),
         savedByMe: post.savedBy.some((l) => l.toString() === userId),
-        commentsCount: 0,
+        commentsCount,
         shares: 0,
       },
     };

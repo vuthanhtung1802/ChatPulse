@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Conversation, Message, Post } from '../types';
-import { authService, userService, chatService, postService } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { User, Conversation, Message, Post, Comment } from '../types';
+import { authService, userService, chatService, postService, commentService } from '../services/api';
 import { io, Socket } from 'socket.io-client';
 
 interface NotificationItem {
@@ -40,6 +40,13 @@ interface AppContextType {
   hidePost: (postId: string) => Promise<void>;
   createPost: (content: string, images?: string[], mood?: string) => Promise<void>;
   fetchSavedPosts: () => Promise<void>;
+  comments: Record<string, Comment[]>;
+  commentsTotal: Record<string, number>;
+  fetchComments: (postId: string, page?: number) => Promise<void>;
+  createComment: (postId: string, content: string) => Promise<void>;
+  deleteComment: (postId: string, commentId: string) => Promise<void>;
+  joinPostRoom: (postId: string) => void;
+  leavePostRoom: (postId: string) => void;
   markNotificationsAsRead: () => void;
 }
 
@@ -128,6 +135,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [postsLoading, setPostsLoading] = useState(false);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [savedPostsLoading, setSavedPostsLoading] = useState(false);
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [commentsTotal, setCommentsTotal] = useState<Record<string, number>>({});
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activeConversationId, setActiveConversationId] = useState<string>('');
@@ -329,6 +338,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    socket.on('newComment', (comment: any) => {
+      setComments((prev) => {
+        const list = prev[comment.post] || [];
+        if (list.some((c) => c._id === comment._id)) return prev;
+        return { ...prev, [comment.post]: [comment, ...list] };
+      });
+      setCommentsTotal((prev) => ({
+        ...prev,
+        [comment.post]: (prev[comment.post] || 0) + 1,
+      }));
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === comment.post ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
+        )
+      );
+    });
+
+    socket.on('deleteComment', (data: { postId: string; commentId: string }) => {
+      setComments((prev) => {
+        const list = prev[data.postId] || [];
+        return { ...prev, [data.postId]: list.filter((c) => c._id !== data.commentId) };
+      });
+      setCommentsTotal((prev) => ({
+        ...prev,
+        [data.postId]: Math.max(0, (prev[data.postId] || 0) - 1),
+      }));
+    });
+
     // Automatically join all current conversation socket rooms
     conversations.forEach((conv) => {
       socket.emit('joinConversation', { conversationId: conv.id });
@@ -340,6 +377,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       socket.off('conversationSeen');
       socket.off('messageRecalled');
       socket.off('userStatusChanged');
+      socket.off('newComment');
+      socket.off('deleteComment');
     };
   }, [socket, currentUser, conversations.length, activeConversationId]);
 
@@ -578,6 +617,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const fetchComments = async (postId: string, page = 1) => {
+    try {
+      const data = await commentService.getComments(postId, page);
+      if (page === 1) {
+        setComments((prev) => ({ ...prev, [postId]: data.comments || [] }));
+      } else {
+        setComments((prev) => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), ...(data.comments || [])],
+        }));
+      }
+      setCommentsTotal((prev) => ({ ...prev, [postId]: data.total || 0 }));
+    } catch (err) {
+      console.error('Error fetching comments', err);
+    }
+  };
+
+  const createComment = async (postId: string, content: string) => {
+    if (!currentUser || !socket) return;
+    try {
+      await commentService.createComment(postId, content);
+      setCommentsTotal((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || 0) + 1,
+      }));
+    } catch (err) {
+      console.error('Error creating comment', err);
+    }
+  };
+
+  const deleteComment = async (postId: string, commentId: string) => {
+    try {
+      await commentService.deleteComment(postId, commentId);
+      setComments((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter((c) => c._id !== commentId),
+      }));
+      setCommentsTotal((prev) => ({
+        ...prev,
+        [postId]: Math.max(0, (prev[postId] || 0) - 1),
+      }));
+    } catch (err) {
+      console.error('Error deleting comment', err);
+    }
+  };
+
+  const joinPostRoom = (postId: string) => {
+    if (socket) {
+      socket.emit('joinPost', { postId });
+    }
+  };
+
+  const leavePostRoom = (postId: string) => {
+    if (socket) {
+      socket.emit('leavePost', { postId });
+    }
+  };
+
   const fetchSavedPosts = async () => {
     setSavedPostsLoading(true);
     try {
@@ -636,6 +733,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hidePost,
         createPost,
         fetchSavedPosts,
+        comments,
+        commentsTotal,
+        fetchComments,
+        createComment,
+        deleteComment,
+        joinPostRoom,
+        leavePostRoom,
         markNotificationsAsRead
       }}
     >
