@@ -12,7 +12,7 @@
     "baseUrl": "./",
     "ignoreDeprecations": "5.0",
     "rootDir": "src",
-    "incremental": true,
+    "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,

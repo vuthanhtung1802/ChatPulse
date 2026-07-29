@@ -3,19 +3,20 @@ import {
   Post,
   Body,
   Get,
+  Param,
   UseGuards,
   Request,
   HttpCode,
   HttpStatus,
-  Res,
 } from "@nestjs/common";
-import { Response } from "express";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { JwtRefreshGuard } from "./guards/jwt-refresh.guard";
+import { GoogleAuthGuard } from "./guards/google-auth.guard";
+import { FacebookAuthGuard } from "./guards/facebook-auth.guard";
 import { UsersService } from "../users/users.service";
 
 @Controller("auth")
@@ -40,18 +41,8 @@ export class AuthController {
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.login(loginDto);
-    res.cookie("refreshToken", result.refreshToken, {
-      httpOnly: true,
-      secure: false, // set to true in production if HTTPS is used
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-    return result;
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -59,12 +50,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(
     @Request() req,
-    @Res({ passthrough: true }) res: Response,
     @Body() body?: { refreshToken?: string },
   ) {
-    const refreshToken = req.cookies?.refreshToken || body?.refreshToken;
-    await this.authService.logout(req.user._id.toString(), refreshToken);
-    res.clearCookie("refreshToken");
+    await this.authService.logout(req.user._id.toString(), body?.refreshToken);
     return {
       message: "Logout successful",
     };
@@ -75,22 +63,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Request() req,
-    @Res({ passthrough: true }) res: Response,
     @Body() refreshTokenDto: RefreshTokenDto,
   ) {
     const userId = req.user._id.toString();
-    const refreshToken = req.cookies?.refreshToken || refreshTokenDto.refreshToken;
-    const tokens = await this.authService.refreshTokens(
+    return this.authService.refreshTokens(
       userId,
-      refreshToken,
+      refreshTokenDto.refreshToken,
     );
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-    return tokens;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -107,7 +86,42 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get("users")
   async getUsers(@Request() req) {
-    // Return all users to chat with, excluding the logged-in user
     return this.usersService.findAll(req.user._id.toString());
+  }
+
+  @Get("google")
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth() {}
+
+  @Get("google/callback")
+  @UseGuards(GoogleAuthGuard)
+  async googleAuthRedirect(@Request() req) {
+    return this.handleOAuthLogin(req.user);
+  }
+
+  @Get("facebook")
+  @UseGuards(FacebookAuthGuard)
+  async facebookAuth() {}
+
+  @Get("facebook/callback")
+  @UseGuards(FacebookAuthGuard)
+  async facebookAuthRedirect(@Request() req) {
+    return this.handleOAuthLogin(req.user);
+  }
+
+  @Get("verify/:token")
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Param("token") token: string) {
+    const result = await this.authService.verifyEmail(token);
+    return { message: result };
+  }
+
+  private async handleOAuthLogin(user: any) {
+    const tokens = await this.authService.generateTokens(
+      user._id.toString(),
+      user.email,
+    );
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
   }
 }

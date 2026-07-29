@@ -27,47 +27,34 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
-  async addRefreshToken(
+  async findByVerificationToken(token: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ verificationToken: token }).exec();
+  }
+
+  async setRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<UserDocument | null> {
     return this.userModel
       .findByIdAndUpdate(
         userId,
-        { $push: { refreshTokens: refreshToken } },
+        { $set: { refreshTokens: [refreshToken] } },
         { new: true },
       )
       .exec();
   }
 
-  async removeRefreshToken(
+  async updateRefreshToken(
     userId: string,
-    refreshToken: string,
-  ): Promise<UserDocument | null> {
-    return this.userModel
-      .findByIdAndUpdate(
-        userId,
-        { $pull: { refreshTokens: refreshToken } },
-        { new: true },
-      )
-      .exec();
-  }
-
-  async updateRefreshTokens(
-    userId: string,
-    oldRefreshTokenHash: string,
     newRefreshTokenHash: string,
   ): Promise<UserDocument | null> {
-    // MongoDB does not support positional update with bcrypt compare easily,
-    // so we can read the user, modify the array in JS, and save it.
-    const user = await this.userModel.findById(userId);
-    if (!user) return null;
-
-    user.refreshTokens = user.refreshTokens.filter(
-      (token) => token !== oldRefreshTokenHash,
-    );
-    user.refreshTokens.push(newRefreshTokenHash);
-    return user.save();
+    return this.userModel
+      .findByIdAndUpdate(
+        userId,
+        { $set: { refreshTokens: [newRefreshTokenHash] } },
+        { new: true },
+      )
+      .exec();
   }
 
   async removeAllRefreshTokens(userId: string): Promise<UserDocument | null> {

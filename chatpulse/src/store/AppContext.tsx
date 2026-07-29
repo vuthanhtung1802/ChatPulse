@@ -157,7 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sync state and connect socket on mount
   useEffect(() => {
     const initialize = async () => {
-      const token = localStorage.getItem('chatpulse_accessToken');
+      const token = sessionStorage.getItem('chatpulse_accessToken');
       if (token) {
         try {
           const userRes = await authService.getCurrentUser();
@@ -198,7 +198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Connect Socket.IO client when currentUser is set
   useEffect(() => {
-    const token = localStorage.getItem('chatpulse_accessToken');
+    const token = sessionStorage.getItem('chatpulse_accessToken');
     if (currentUser && token) {
       const newSocket = io('http://localhost:3000', {
         auth: { token }
@@ -421,7 +421,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const p = password || 'password123';
       const data = await authService.login(email, p);
-      localStorage.setItem('chatpulse_accessToken', data.accessToken);
+      sessionStorage.setItem('chatpulse_accessToken', data.accessToken);
+      sessionStorage.setItem('chatpulse_refreshToken', data.refreshToken);
 
       const userRes = await authService.getCurrentUser();
       const user = transformUser(userRes);

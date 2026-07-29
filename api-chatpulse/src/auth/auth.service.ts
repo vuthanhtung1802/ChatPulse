@@ -6,10 +6,12 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
+import * as crypto from "crypto";
 import { UsersService } from "../users/users.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UserDocument } from "../users/schemas/user.schema";
+import { MailService } from "../mail/mail.service";
 import { StringValue } from "ms";
 
 @Injectable()
@@ -18,26 +20,54 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<UserDocument> {
     const { name, email, password } = registerDto;
 
-    // Check if email already exists
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new BadRequestException("Email already registered");
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    return this.usersService.create({
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const user = await this.usersService.create({
       name,
       email,
       password: hashedPassword,
+      verificationToken,
+      verificationTokenExpires,
     });
+
+    await this.mailService.sendVerificationEmail(
+      email,
+      name,
+      verificationToken,
+    );
+
+    return user;
+  }
+
+  async verifyEmail(token: string): Promise<string> {
+    const user = await this.usersService.findByVerificationToken(token);
+    if (!user) {
+      throw new BadRequestException("Invalid verification token");
+    }
+    if (user.verificationTokenExpires < new Date()) {
+      throw new BadRequestException("Verification token expired");
+    }
+
+    user.isVerified = true;
+    user.verificationToken = "";
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    return "Email verified successfully";
   }
 
   async generateTokens(
@@ -70,24 +100,20 @@ export class AuthService {
   ): Promise<{ accessToken: string; refreshToken: string; user: any }> {
     const { email, password } = loginDto;
 
-    // Find user
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    // Generate tokens
     const tokens = await this.generateTokens(user._id.toString(), user.email);
 
-    // Hash and store refresh token in user's refreshTokens array
     const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
-    await this.usersService.addRefreshToken(
+    await this.usersService.setRefreshToken(
       user._id.toString(),
       hashedRefreshToken,
     );
@@ -104,22 +130,8 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string, refreshToken?: string): Promise<void> {
-    // If refreshToken is passed, remove only that one; otherwise clear all
-    if (refreshToken) {
-      const user = await this.usersService.findById(userId);
-      if (user && user.refreshTokens && user.refreshTokens.length > 0) {
-        for (const tokenHash of user.refreshTokens) {
-          const isMatched = await bcrypt.compare(refreshToken, tokenHash);
-          if (isMatched) {
-            await this.usersService.removeRefreshToken(userId, tokenHash);
-            break;
-          }
-        }
-      }
-    } else {
-      await this.usersService.removeAllRefreshTokens(userId);
-    }
+  async logout(userId: string, _refreshToken?: string): Promise<void> {
+    await this.usersService.removeAllRefreshTokens(userId);
   }
 
   async refreshTokens(
@@ -131,27 +143,16 @@ export class AuthService {
       throw new UnauthorizedException("Access Denied");
     }
 
-    // Find the matching hashed token
-    let matchedTokenHash: string | null = null;
-    for (const tokenHash of user.refreshTokens) {
-      const isMatched = await bcrypt.compare(refreshToken, tokenHash);
-      if (isMatched) {
-        matchedTokenHash = tokenHash;
-        break;
-      }
-    }
-
-    if (!matchedTokenHash) {
+    const isMatched = await bcrypt.compare(refreshToken, user.refreshTokens[0]);
+    if (!isMatched) {
       throw new UnauthorizedException("Access Denied");
     }
 
     const tokens = await this.generateTokens(user._id.toString(), user.email);
     const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
 
-    // Update the matched token in the user's tokens list
-    await this.usersService.updateRefreshTokens(
+    await this.usersService.updateRefreshToken(
       user._id.toString(),
-      matchedTokenHash,
       hashedRefreshToken,
     );
 

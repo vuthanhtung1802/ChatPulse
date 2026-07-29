@@ -4,13 +4,11 @@ const API_URL = import.meta.env.VITE_API_URL
 
 export const apiClient = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // Crucial for sending/receiving HTTP-only cookies (refresh token)
 });
 
-// Request Interceptor: Attach access token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('chatpulse_accessToken');
+    const token = sessionStorage.getItem('chatpulse_accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -21,7 +19,6 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Handle auto-refresh token
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
@@ -41,11 +38,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Check if error is 401 Unauthorized and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/auth/refresh') {
-        // Refresh token itself expired or invalid, trigger logout
-        localStorage.removeItem('chatpulse_accessToken');
+        sessionStorage.removeItem('chatpulse_accessToken');
+        sessionStorage.removeItem('chatpulse_refreshToken');
         window.dispatchEvent(new CustomEvent('auth-unauthorized'));
         return Promise.reject(error);
       }
@@ -67,16 +63,15 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Request token refresh
+        const refreshToken = sessionStorage.getItem('chatpulse_refreshToken');
         const response = await axios.post(
           `${API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
+          { refreshToken }
         );
-        const { accessToken } = response.data;
-        localStorage.setItem('chatpulse_accessToken', accessToken);
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        sessionStorage.setItem('chatpulse_accessToken', accessToken);
+        sessionStorage.setItem('chatpulse_refreshToken', newRefreshToken);
 
-        // Update default header
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
@@ -87,9 +82,9 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        
-        // Log out user
-        localStorage.removeItem('chatpulse_accessToken');
+
+        sessionStorage.removeItem('chatpulse_accessToken');
+        sessionStorage.removeItem('chatpulse_refreshToken');
         window.dispatchEvent(new CustomEvent('auth-unauthorized'));
         return Promise.reject(refreshError);
       }
@@ -104,7 +99,10 @@ export const authService = {
   async register(name: string, email: string, password: string) {
     const response = await apiClient.post(`/auth/register`, { name, email, password });
     if (response.data.accessToken) {
-      localStorage.setItem('chatpulse_accessToken', response.data.accessToken);
+      sessionStorage.setItem('chatpulse_accessToken', response.data.accessToken);
+      if (response.data.refreshToken) {
+        sessionStorage.setItem('chatpulse_refreshToken', response.data.refreshToken);
+      }
     }
     return response.data;
   },
@@ -112,16 +110,19 @@ export const authService = {
   async login(email: string, password: string) {
     const response = await apiClient.post(`${API_URL}/auth/login`, { email, password });
     if (response.data.accessToken) {
-      localStorage.setItem('chatpulse_accessToken', response.data.accessToken);
+      sessionStorage.setItem('chatpulse_accessToken', response.data.accessToken);
+      sessionStorage.setItem('chatpulse_refreshToken', response.data.refreshToken);
     }
     return response.data;
   },
 
   async logout() {
+    const refreshToken = sessionStorage.getItem('chatpulse_refreshToken');
     try {
-      await apiClient.post(`${API_URL}/auth/logout`);
+      await apiClient.post(`${API_URL}/auth/logout`, { refreshToken });
     } finally {
-      localStorage.removeItem('chatpulse_accessToken');
+      sessionStorage.removeItem('chatpulse_accessToken');
+      sessionStorage.removeItem('chatpulse_refreshToken');
     }
   },
 
@@ -176,7 +177,7 @@ export const userService = {
 export const chatService = {
   async getConversations() {
     const response = await apiClient.get(`${API_URL}/chat/conversations`);
-    return response.data; // List of conversations
+    return response.data;
   },
 
   async createConversation(participantIds: string[], isGroup = false, groupName = '') {
@@ -213,8 +214,13 @@ export const commentService = {
     return response.data;
   },
 
-  async createComment(postId: string, content: string) {
-    const response = await apiClient.post(`${API_URL}/posts/${postId}/comments`, { content });
+  async createComment(postId: string, content: string, parentCommentId?: string, emoji?: string) {
+    const response = await apiClient.post(`${API_URL}/posts/${postId}/comments`, { content, parentCommentId, emoji });
+    return response.data;
+  },
+
+  async toggleLikeComment(postId: string, commentId: string) {
+    const response = await apiClient.post(`${API_URL}/posts/${postId}/comments/${commentId}/like`);
     return response.data;
   },
 
@@ -269,6 +275,92 @@ export const postService = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  },
+
+  async sharePost(postId: string) {
+    const response = await apiClient.post(`${API_URL}/posts/${postId}/share`);
+    return response.data;
+  },
+};
+
+// Friend Request Service
+export const friendRequestService = {
+  async sendRequest(receiverId: string) {
+    const response = await apiClient.post(`${API_URL}/friend-requests/send`, { receiverId });
+    return response.data;
+  },
+
+  async acceptRequest(requestId: string) {
+    const response = await apiClient.put(`${API_URL}/friend-requests/${requestId}/accept`);
+    return response.data;
+  },
+
+  async rejectRequest(requestId: string) {
+    const response = await apiClient.put(`${API_URL}/friend-requests/${requestId}/reject`);
+    return response.data;
+  },
+
+  async cancelRequest(requestId: string) {
+    const response = await apiClient.delete(`${API_URL}/friend-requests/${requestId}/cancel`);
+    return response.data;
+  },
+
+  async getSentRequests() {
+    const response = await apiClient.get(`${API_URL}/friend-requests/sent`);
+    return response.data;
+  },
+
+  async getReceivedRequests() {
+    const response = await apiClient.get(`${API_URL}/friend-requests/received`);
+    return response.data;
+  },
+
+  async getFriends() {
+    const response = await apiClient.get(`${API_URL}/friend-requests/friends`);
+    return response.data;
+  },
+
+  async getPendingCount() {
+    const response = await apiClient.get(`${API_URL}/friend-requests/pending-count`);
+    return response.data;
+  },
+
+  async getRelationship(userId: string) {
+    const response = await apiClient.get(`${API_URL}/friend-requests/relationship/${userId}`);
+    return response.data;
+  },
+
+  async removeFriend(friendId: string) {
+    const response = await apiClient.delete(`${API_URL}/friend-requests/friends/${friendId}`);
+    return response.data;
+  },
+};
+
+// Notification Service
+export const notificationService = {
+  async getAll(page = 1, limit = 20) {
+    const response = await apiClient.get(`${API_URL}/notifications?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+
+  async getUnreadCount() {
+    const response = await apiClient.get(`${API_URL}/notifications/unread-count`);
+    return response.data;
+  },
+
+  async markAsRead(notificationId: string) {
+    const response = await apiClient.put(`${API_URL}/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  async markAllAsRead() {
+    const response = await apiClient.put(`${API_URL}/notifications/read-all`);
+    return response.data;
+  },
+
+  async delete(notificationId: string) {
+    const response = await apiClient.delete(`${API_URL}/notifications/${notificationId}`);
     return response.data;
   },
 };
