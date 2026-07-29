@@ -27,10 +27,6 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
-  async findByVerificationToken(token: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ verificationToken: token }).exec();
-  }
-
   async setRefreshToken(
     userId: string,
     refreshToken: string,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApp } from '../store/AppContext';
+import { useApp, getInitialsAvatar } from '../store/AppContext';
 import { Send, Trash2, Loader2 } from 'lucide-react';
 
 interface CommentSectionProps {
@@ -72,7 +72,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, isOpen }
               postComments.map((comment) => (
                 <div key={comment._id} className="flex items-start gap-2.5 group">
                   <img
-                    src={comment.author.avatar}
+                    src={comment.author.avatar || getInitialsAvatar(comment.author.name)}
                     alt={comment.author.name}
                     referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-lg object-cover shrink-0 mt-0.5"

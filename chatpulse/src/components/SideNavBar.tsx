@@ -71,7 +71,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
           className="w-full py-3 px-4 bg-primary text-on-primary font-medium rounded-xl flex items-center justify-center gap-2 hover:bg-primary-container hover:text-on-primary-container transition-all duration-200 shadow-sm shadow-primary/25 cursor-pointer group"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-200" />
-          <span className="text-sm font-sans">New Chat</span>
+          <span className="text-sm font-sans">Add Friend</span>
         </button>
       </div>
 

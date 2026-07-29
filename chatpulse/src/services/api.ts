@@ -97,7 +97,7 @@ apiClient.interceptors.response.use(
 // Auth Service
 export const authService = {
   async register(name: string, email: string, password: string) {
-    const response = await apiClient.post(`/auth/register`, { name, email, password });
+    const response = await apiClient.post(`${API_URL}/auth/register`, { name, email, password });
     if (response.data.accessToken) {
       sessionStorage.setItem('chatpulse_accessToken', response.data.accessToken);
       if (response.data.refreshToken) {

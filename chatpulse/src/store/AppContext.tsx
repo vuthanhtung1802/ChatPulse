@@ -52,18 +52,37 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+export const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'];
+
+function isLightColor(hex: string): boolean {
+  const c = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * ((c >> 16) & 0xff) + 0.587 * ((c >> 8) & 0xff) + 0.114 * (c & 0xff)) / 255;
+  return lum > 0.55;
+}
+
+export function getInitialsAvatar(name: string = '?'): string {
+  const initials = name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+  const colorIndex = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
+  const bg = AVATAR_COLORS[colorIndex];
+  const textColor = isLightColor(bg) ? '#1f2937' : 'white';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="16" fill="${bg}"/><text x="50" y="50" text-anchor="middle" dominant-baseline="central" fill="${textColor}" font-family="system-ui" font-weight="700" font-size="40">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
 const transformUser = (u: any): User => {
   if (!u) return {} as User;
+  const name = u.name || '';
   return {
     id: u._id || u.id,
-    name: u.name || '',
+    name,
     email: u.email || '',
-    avatar: u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+    avatar: u.avatar || getInitialsAvatar(name),
+    role: u.role || 'user',
     plan: u.role === 'admin' ? 'Enterprise Plan' : 'Free Plan',
     status: u.status || 'offline',
     bio: u.bio || '',
     location: u.location || '',
-    joinDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'August 2022',
+    joinDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     website: u.website || '',
     interests: u.interests || [],
     photoGallery: u.photoGallery || []
@@ -100,8 +119,8 @@ const transformConversation = (c: any, currentUserId: string): Conversation => {
     return {
       id: c._id,
       participantId: otherParticipant._id || otherParticipant,
-      participantName: otherParticipant.name || 'Người dùng ChatPulse',
-      participantAvatar: otherParticipant.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+      participantName: otherParticipant.name || 'Unknown User',
+      participantAvatar: otherParticipant.avatar || getInitialsAvatar(otherParticipant.name),
       participantStatus: otherParticipant.status || 'offline',
       lastMessageText: lastMsgText,
       lastMessageTime: lastMsgTime,
@@ -117,7 +136,7 @@ const transformMessage = (msg: any): Message => {
     text: msg.isRecalled ? 'Tin nhắn đã bị thu hồi' : (msg.content || ''),
     senderId: senderId,
     senderName: msg.sender?.name || '',
-    senderAvatar: msg.sender?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+    senderAvatar: msg.sender?.avatar || getInitialsAvatar(msg.sender?.name),
     timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: msg.isRecalled ? undefined : (msg.status || 'sent'),
     attachmentUrl: msg.isRecalled ? undefined : msg.attachmentUrl,
@@ -419,8 +438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Login action
   const login = async (email: string, password?: string) => {
     try {
-      const p = password || 'password123';
-      const data = await authService.login(email, p);
+      const data = await authService.login(email, password);
       sessionStorage.setItem('chatpulse_accessToken', data.accessToken);
       sessionStorage.setItem('chatpulse_refreshToken', data.refreshToken);
 
@@ -445,9 +463,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Signup action
   const signup = async (name: string, email: string, password?: string) => {
     try {
-      const p = password || 'password123';
-      await authService.register(name, email, p);
-      return await login(email, p);
+      await authService.register(name, email, password);
+      return await login(email, password);
     } catch (err) {
       console.error('Signup failed', err);
       return false;

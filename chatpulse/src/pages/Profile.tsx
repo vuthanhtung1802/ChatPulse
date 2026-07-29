@@ -84,14 +84,7 @@ export const Profile: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         
         {/* Banner with Profile image overlapping */}
-        <div className="relative h-48 md:h-56 bg-neutral-800 shrink-0">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3WPCx4_irATlKmHUo6a71Le--1CUuIomp6cf48Qd8g1ektbmF_WRQvL2O1sRsm3vfwSlhh2hyeYJAA02hPhJ1avkEHxvBaatpF6kz8cjSqeFuBjpBvujmJjnKDkGbKtm0PJqSAU_nxKvU_sn8HqVLOKgnJQoT9WmbunVg-4XJT2KAwAVNT0ssNqpENx7LcRW5e8mOo3lW6fYzTkFodUs_1DNRm_D1QGs46A9lO5FMkLnsKbWm7pF1HPbdaMtRy9An-oe2iYvXP0U"
-            alt="Sunset Banner"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover opacity-85"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+        <div className="relative h-48 md:h-56 bg-gradient-to-br from-primary/40 via-secondary/30 to-primary/10 shrink-0">
           
           {/* Absolute Overlapping profile avatar */}
           <div className="absolute -bottom-12 left-6 flex items-end gap-4">
@@ -120,13 +113,13 @@ export const Profile: React.FC = () => {
             
             <div className="mb-2 space-y-1 select-none">
               <div className="flex items-center gap-2">
-                <h3 className="text-white font-display font-bold text-lg md:text-xl drop-shadow-sm">{currentUser.name}</h3>
+                <h3 className="text-on-surface font-display font-bold text-lg md:text-xl">{currentUser.name}</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-on-secondary border border-secondary/20 shadow-xs flex items-center gap-1">
                   <Award size={10} />
                   <span>{currentUser.plan}</span>
                 </span>
               </div>
-              <p className="text-white/80 text-xs font-semibold drop-shadow-xs flex items-center gap-1.5">
+              <p className="text-on-surface-variant text-xs font-semibold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-secondary"></span>
                 <span>Active Workspace</span>
               </p>
@@ -146,7 +139,7 @@ export const Profile: React.FC = () => {
                 About Me
               </h4>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                {currentUser.bio || 'Product designer & Digital Nomad. Write something about yourself...'}
+                {currentUser.bio || 'No bio yet.'}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 text-xs text-on-surface-variant font-medium">

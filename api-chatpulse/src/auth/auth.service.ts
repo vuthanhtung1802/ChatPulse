@@ -6,12 +6,10 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
-import * as crypto from "crypto";
 import { UsersService } from "../users/users.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UserDocument } from "../users/schemas/user.schema";
-import { MailService } from "../mail/mail.service";
 import { StringValue } from "ms";
 
 @Injectable()
@@ -20,7 +18,6 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<UserDocument> {
@@ -33,41 +30,13 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
     const user = await this.usersService.create({
       name,
       email,
       password: hashedPassword,
-      verificationToken,
-      verificationTokenExpires,
     });
 
-    await this.mailService.sendVerificationEmail(
-      email,
-      name,
-      verificationToken,
-    );
-
     return user;
-  }
-
-  async verifyEmail(token: string): Promise<string> {
-    const user = await this.usersService.findByVerificationToken(token);
-    if (!user) {
-      throw new BadRequestException("Invalid verification token");
-    }
-    if (user.verificationTokenExpires < new Date()) {
-      throw new BadRequestException("Verification token expired");
-    }
-
-    user.isVerified = true;
-    user.verificationToken = "";
-    user.verificationTokenExpires = null;
-    await user.save();
-
-    return "Email verified successfully";
   }
 
   async generateTokens(

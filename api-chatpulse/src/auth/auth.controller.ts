@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Get,
-  Param,
   UseGuards,
   Request,
   HttpCode,
@@ -15,8 +14,6 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { JwtRefreshGuard } from "./guards/jwt-refresh.guard";
-import { GoogleAuthGuard } from "./guards/google-auth.guard";
-import { FacebookAuthGuard } from "./guards/facebook-auth.guard";
 import { UsersService } from "../users/users.service";
 
 @Controller("auth")
@@ -80,6 +77,7 @@ export class AuthController {
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
+      avatar: req.user.avatar,
     };
   }
 
@@ -89,39 +87,4 @@ export class AuthController {
     return this.usersService.findAll(req.user._id.toString());
   }
 
-  @Get("google")
-  @UseGuards(GoogleAuthGuard)
-  async googleAuth() {}
-
-  @Get("google/callback")
-  @UseGuards(GoogleAuthGuard)
-  async googleAuthRedirect(@Request() req) {
-    return this.handleOAuthLogin(req.user);
-  }
-
-  @Get("facebook")
-  @UseGuards(FacebookAuthGuard)
-  async facebookAuth() {}
-
-  @Get("facebook/callback")
-  @UseGuards(FacebookAuthGuard)
-  async facebookAuthRedirect(@Request() req) {
-    return this.handleOAuthLogin(req.user);
-  }
-
-  @Get("verify/:token")
-  @HttpCode(HttpStatus.OK)
-  async verifyEmail(@Param("token") token: string) {
-    const result = await this.authService.verifyEmail(token);
-    return { message: result };
-  }
-
-  private async handleOAuthLogin(user: any) {
-    const tokens = await this.authService.generateTokens(
-      user._id.toString(),
-      user.email,
-    );
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
-  }
 }

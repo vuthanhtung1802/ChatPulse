@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApp } from '../store/AppContext';
+import { useApp, getInitialsAvatar } from '../store/AppContext';
 import { CommentSection } from '../components/CommentSection';
 import {
   Heart,
@@ -133,7 +133,7 @@ export const SavedPosts: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
-                            src={post.author.avatar}
+                            src={post.author.avatar || getInitialsAvatar(post.author.name)}
                             alt={post.author.name}
                             referrerPolicy="no-referrer"
                             className="w-10 h-10 rounded-xl object-cover ring-2 ring-primary/10"
@@ -143,9 +143,11 @@ export const SavedPosts: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="font-display font-bold text-sm text-on-surface">{post.author.name}</h4>
-                            <span className="text-[9px] font-bold text-primary bg-primary-container/40 px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
-                              Pro
-                            </span>
+                            {currentUser && post.author._id === currentUser.id && currentUser.role === 'admin' && (
+                              <span className="text-[9px] font-bold text-primary bg-primary-container/40 px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
+                                Pro
+                              </span>
+                            )}
                           </div>
                           {post.mood && (
                             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
