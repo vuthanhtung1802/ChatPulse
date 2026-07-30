@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApp, getInitialsAvatar } from '../store/AppContext';
+import { useApp, getInitialsAvatar } from '../contexts/AppContext';
 import { Send, Trash2, Loader2 } from 'lucide-react';
 
 interface CommentSectionProps {

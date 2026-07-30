@@ -16,7 +16,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: true, // Dynamically mirror origin, allowing credentials
+    origin: true,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
   });
@@ -32,5 +32,7 @@ async function bootstrap() {
   const port = process.env.PORT;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
+
+  // Initialize WebSocket server on the same HTTP server
 }
 bootstrap();

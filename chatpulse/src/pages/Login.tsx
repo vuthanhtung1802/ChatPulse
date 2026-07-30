@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useApp } from '../store/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const Login: React.FC = () => {

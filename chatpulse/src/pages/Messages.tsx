@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from '../store/AppContext';
-import { Message, Conversation } from '../types';
+import { useApp } from '../contexts/AppContext';
 import { 
   Search, 
   Phone, 
@@ -19,7 +18,7 @@ import {
   UserCheck,
   Trash
 } from 'lucide-react';
-import { userService } from '../services/api';
+import { userService } from '../services/user.service';
 
 export const Messages: React.FC = () => {
   const { 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../store/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { 
   MapPin, 
   Calendar, 
@@ -15,7 +15,7 @@ import {
   ShieldAlert,
   Award
 } from 'lucide-react';
-import { userService } from '../services/api';
+import { userService } from '../services/user.service';
 
 export const Profile: React.FC = () => {
   const { currentUser, updateProfile } = useApp();

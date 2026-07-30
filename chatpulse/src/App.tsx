@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { AppProvider, useApp } from './store/AppContext';
+import { AppProvider, useApp } from './contexts/AppContext';
 import { SideNavBar } from './components/SideNavBar';
 import { NewChatModal } from './components/NewChatModal';
 import { Home } from './pages/Home';

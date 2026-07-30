@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApp, getInitialsAvatar } from '../store/AppContext';
-import { postService } from '../services/api';
+import { useApp, getInitialsAvatar } from '../contexts/AppContext';
+import { postService } from '../services/posts.service';
 import { CommentSection } from '../components/CommentSection';
 import { 
   Heart, 
@@ -81,7 +81,7 @@ export const Home: React.FC = () => {
   const [toast, setToast] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (toast) {

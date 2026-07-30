@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useApp } from '../store/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { 
   Home, 
   MessageSquare, 

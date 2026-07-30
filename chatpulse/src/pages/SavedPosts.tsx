@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApp, getInitialsAvatar } from '../store/AppContext';
+import { useApp, getInitialsAvatar } from '../contexts/AppContext';
 import { CommentSection } from '../components/CommentSection';
 import {
   Heart,
@@ -63,7 +63,7 @@ export const SavedPosts: React.FC = () => {
   const { savedPosts, savedPostsLoading, fetchSavedPosts, toggleSavePost, toggleLikePost, hidePost, currentUser } = useApp();
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     fetchSavedPosts();

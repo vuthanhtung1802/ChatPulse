@@ -11,7 +11,6 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { CommentsService } from "./comments.service";
-import { PostsGateway } from "./posts.gateway";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @Controller("posts")
@@ -19,7 +18,6 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
-    private readonly postsGateway: PostsGateway,
   ) {}
 
   @Post(":id/comments")
@@ -36,7 +34,6 @@ export class CommentsController {
       req.user._id.toString(),
       content,
     );
-    this.postsGateway.emitNewComment(comment.toObject());
     return { comment };
   }
 
@@ -69,7 +66,6 @@ export class CommentsController {
       req.user._id.toString(),
       req.user.role,
     );
-    this.postsGateway.emitDeleteComment({ postId, commentId });
     return { success: true };
   }
 }

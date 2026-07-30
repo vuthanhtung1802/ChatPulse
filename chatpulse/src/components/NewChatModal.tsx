@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { X, Search, Check, Users, MessageSquare } from 'lucide-react';
-import { useApp } from '../store/AppContext';
+import { useApp } from '../contexts/AppContext';
 
 interface NewChatModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-import { userService } from '../services/api';
+import { userService } from '../services/user.service';
 
 export const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
   const { createConversation, createGroupConversation, currentUser } = useApp();
