@@ -9,7 +9,7 @@ interface CommentSectionProps {
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ postId, isOpen }) => {
-  const { comments, commentsTotal, fetchComments, createComment, deleteComment, joinPostRoom, leavePostRoom, currentUser } = useApp();
+  const { comments, commentsTotal, fetchComments, createComment, deleteComment, currentUser } = useApp();
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -20,10 +20,6 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, isOpen }
   useEffect(() => {
     if (isOpen) {
       fetchComments(postId);
-      joinPostRoom(postId);
-      return () => {
-        leavePostRoom(postId);
-      };
     }
   }, [isOpen, postId]);
 

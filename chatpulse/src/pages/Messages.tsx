@@ -28,14 +28,12 @@ export const Messages: React.FC = () => {
     setActiveConversationId, 
     sendMessage, 
     recallMessage,
-    sendTypingStatus,
-    isTyping, 
     currentUser 
   } = useApp();
 
   const [inputText, setInputText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
@@ -50,7 +48,7 @@ export const Messages: React.FC = () => {
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeMessages, isTyping]);
+  }, [activeMessages]);
 
   // Handle mock call duration
   useEffect(() => {
@@ -101,15 +99,6 @@ export const Messages: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-    sendTypingStatus(true);
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      sendTypingStatus(false);
-    }, 1500);
   };
 
   const formatDuration = (sec: number) => {
@@ -150,8 +139,6 @@ export const Messages: React.FC = () => {
             filteredConversations.map((conv) => {
               const isSelected = conv.id === activeConversationId;
               const hasUnread = conv.lastMessageUnread && !isSelected;
-              const typing = isTyping[conv.id];
-
               return (
                 <button
                   key={conv.id}
@@ -363,22 +350,7 @@ export const Messages: React.FC = () => {
             );
           })}
 
-          {/* Typing Indicator */}
-          {activeConv && isTyping[activeConv.id] && (
-            <div className="flex gap-3 max-w-[80%] mr-auto items-center animate-in fade-in duration-150">
-              <img
-                src={activeConv.participantAvatar}
-                alt={activeConv.participantName}
-                referrerPolicy="no-referrer"
-                className="w-8 h-8 rounded-lg object-cover ring-2 ring-primary/5"
-              />
-              <div className="bg-surface-container-low text-on-surface p-3 px-4 rounded-2xl rounded-bl-xs border border-outline-variant/30 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce duration-1000"></span>
-                <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce duration-1000 delay-150"></span>
-                <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce duration-1000 delay-300"></span>
-              </div>
-            </div>
-          )}
+
 
           <div ref={messagesEndRef} />
         </div>

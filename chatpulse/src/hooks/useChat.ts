@@ -3,11 +3,10 @@ import { Conversation, Message, User } from '../types/types';
 import { chatService } from '../services/chat.service';
 import { transformConversation, transformMessage } from '../utils/transformers';
 
-export function useChatState(currentUser: User | null, send: (event: string, data?: any) => void, socket: WebSocket | null) {
+export function useChatState(currentUser: User | null) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [activeConversationId, setActiveConversationId] = useState<string>('');
-  const [isTyping, setIsTyping] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!activeConversationId || !currentUser) return;
@@ -27,45 +26,26 @@ export function useChatState(currentUser: User | null, send: (event: string, dat
 
     loadMessages();
 
-    if (socket) {
-      send('joinConversation', { conversationId: activeConversationId });
-      send('seenConversation', { conversationId: activeConversationId });
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === activeConversationId) {
+          return { ...conv, lastMessageUnread: false };
+        }
+        return conv;
+      })
+    );
+  }, [activeConversationId, currentUser]);
 
-      setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === activeConversationId) {
-            return { ...conv, lastMessageUnread: false };
-          }
-          return conv;
-        })
-      );
-    }
-  }, [activeConversationId, socket, currentUser]);
-
-  const sendMessage = (text: string, attachmentUrl?: string, attachmentType?: 'image' | 'video') => {
-    if (!currentUser || !activeConversationId) return;
-    send('sendMessage', {
-      conversationId: activeConversationId,
-      content: text,
-      attachmentUrl,
-      attachmentType
-    });
+  const sendMessage = (_text: string, _attachmentUrl?: string, _attachmentType?: 'image' | 'video') => {
+    console.warn('WebSocket removed — cannot send message');
   };
 
-  const recallMessage = async (messageId: string) => {
-    if (!currentUser || !activeConversationId) return;
-    send('recallMessage', {
-      messageId,
-      conversationId: activeConversationId
-    });
+  const recallMessage = async (_messageId: string) => {
+    console.warn('WebSocket removed — cannot recall message');
   };
 
-  const sendTypingStatus = (typing: boolean) => {
-    if (!currentUser || !activeConversationId) return;
-    send('typing', {
-      conversationId: activeConversationId,
-      isTyping: typing
-    });
+  const sendTypingStatus = (_typing: boolean) => {
+    console.warn('WebSocket removed — typing indicator disabled');
   };
 
   const createConversation = async (participantId: string): Promise<string> => {
@@ -77,7 +57,6 @@ export function useChatState(currentUser: User | null, send: (event: string, dat
         return [newConv, ...prev];
       });
       setActiveConversationId(newConv.id);
-      send('joinConversation', { conversationId: newConv.id });
       return newConv.id;
     } catch (err) {
       console.error('Error creating conversation', err);
@@ -94,7 +73,6 @@ export function useChatState(currentUser: User | null, send: (event: string, dat
         return [newConv, ...prev];
       });
       setActiveConversationId(newConv.id);
-      send('joinConversation', { conversationId: newConv.id });
       return newConv.id;
     } catch (err) {
       console.error('Error creating group conversation', err);
@@ -112,7 +90,6 @@ export function useChatState(currentUser: User | null, send: (event: string, dat
     conversations, setConversations,
     messages, setMessages,
     activeConversationId, setActiveConversationId,
-    isTyping, setIsTyping,
     sendMessage, recallMessage, sendTypingStatus,
     createConversation, createGroupConversation,
     clearChat

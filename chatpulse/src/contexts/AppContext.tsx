@@ -4,14 +4,12 @@ import { NotificationItem } from '../types/Notification';
 import { authService } from '../services/auth.service';
 import { userService } from '../services/user.service';
 import { chatService } from '../services/chat.service';
-import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuthState } from '../hooks/useAuth';
 import { useChatState } from '../hooks/useChat';
 import { usePostsState } from '../hooks/usePosts';
 import { useCommentsState } from '../hooks/useComments';
 import { useThemeState } from '../hooks/useTheme';
 import { useNotificationsState } from '../hooks/useNotifications';
-import { useChatSocket } from '../hooks/useChatSocket';
 import { useAuthActions } from './AuthContext';
 import { transformUser, transformConversation } from '../utils/transformers';
 export { getInitialsAvatar, AVATAR_COLORS } from '../utils/avatarUtils';
@@ -24,7 +22,6 @@ interface AppContextType {
   notifications: NotificationItem[];
   theme: 'light' | 'dark';
   activeConversationId: string;
-  isTyping: Record<string, boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -32,7 +29,6 @@ interface AppContextType {
   setActiveConversationId: (id: string) => void;
   sendMessage: (text: string, attachmentUrl?: string, attachmentType?: 'image' | 'video') => void;
   recallMessage: (messageId: string) => Promise<void>;
-  sendTypingStatus: (isTyping: boolean) => void;
   updateProfile: (updatedData: Partial<User>) => Promise<void>;
   createConversation: (participantId: string) => Promise<string>;
   createGroupConversation: (groupName: string, participantIds: string[]) => Promise<string>;
@@ -49,8 +45,6 @@ interface AppContextType {
   fetchComments: (postId: string, page?: number) => Promise<void>;
   createComment: (postId: string, content: string) => Promise<void>;
   deleteComment: (postId: string, commentId: string) => Promise<void>;
-  joinPostRoom: (postId: string) => void;
-  leavePostRoom: (postId: string) => void;
   markNotificationsAsRead: () => void;
 }
 
@@ -58,11 +52,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, setCurrentUser } = useAuthState();
-  const accessToken = sessionStorage.getItem('chatpulse_accessToken');
-  const { socket, send } = useWebSocket(currentUser ? accessToken : null);
   const { theme, toggleTheme } = useThemeState();
   const { notifications, setNotifications, markNotificationsAsRead } = useNotificationsState();
-  const chatCtx = useChatState(currentUser, send, socket);
+  const chatCtx = useChatState(currentUser);
   const postsCtx = usePostsState(currentUser);
   const commentsCtx = useCommentsState(currentUser);
 
@@ -77,10 +69,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           const convsRes = await chatService.getConversations();
           const convs = convsRes.map((c: any) => transformConversation(c, user.id));
-          chatCtx.setConversations(convs);
 
           if (convs.length > 0) {
-            chatCtx.setActiveConversationId(convs[0].id);
           }
         } catch (err) {
           console.error('Initialization failed', err);
@@ -90,21 +80,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initialize();
   }, []);
 
-  useChatSocket(
-    socket, currentUser, send,
-    {
-      setMessages: chatCtx.setMessages,
-      setConversations: chatCtx.setConversations,
-      setIsTyping: chatCtx.setIsTyping,
-      setNotifications,
-      setComments: commentsCtx.setComments,
-      setCommentsTotal: commentsCtx.setCommentsTotal,
-      setPosts: postsCtx.setPosts,
-    },
-    chatCtx.conversations,
-    chatCtx.activeConversationId
-  );
-  const { login, signup, logout } = useAuthActions(setCurrentUser, chatCtx, socket);
+  const { login, signup, logout } = useAuthActions(setCurrentUser, chatCtx);
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -114,7 +90,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       window.removeEventListener('auth-unauthorized', handleUnauthorized);
     };
-  }, [socket]);
+  }, []);
 
   const updateProfile = async (updatedData: Partial<User>) => {
     try {
@@ -126,16 +102,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const joinPostRoom = (postId: string) => {
-    send('joinPost', { postId });
-  };
-
-  const leavePostRoom = (postId: string) => {
-    send('leavePost', { postId });
-  };
-
   return (
-    <AppContext.Provider
+      <AppContext.Provider
       value={{
         currentUser,
         conversations: chatCtx.conversations,
@@ -147,7 +115,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         theme,
         activeConversationId: chatCtx.activeConversationId,
-        isTyping: chatCtx.isTyping,
         login,
         signup,
         logout,
@@ -155,7 +122,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveConversationId: chatCtx.setActiveConversationId,
         sendMessage: chatCtx.sendMessage,
         recallMessage: chatCtx.recallMessage,
-        sendTypingStatus: chatCtx.sendTypingStatus,
         updateProfile,
         createConversation: chatCtx.createConversation,
         createGroupConversation: chatCtx.createGroupConversation,
@@ -169,8 +135,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchComments: commentsCtx.fetchComments,
         createComment: commentsCtx.createComment,
         deleteComment: commentsCtx.deleteComment,
-        joinPostRoom,
-        leavePostRoom,
         markNotificationsAsRead
       }}
     >

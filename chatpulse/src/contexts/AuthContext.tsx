@@ -10,7 +10,6 @@ export function useAuthActions(
     setActiveConversationId: React.Dispatch<React.SetStateAction<string>>;
     clearChat: () => void;
   },
-  socket: WebSocket | null
 ) {
   const login = async (email: string, password: string) => {
     try {
@@ -50,9 +49,6 @@ export function useAuthActions(
     authService.logout();
     setCurrentUser(null);
     chatCtx.clearChat();
-    if (socket) {
-      socket.close(4000);
-    }
   };
 
   return { login, signup, logout };
