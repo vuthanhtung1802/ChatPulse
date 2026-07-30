@@ -119,7 +119,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateProfile = async (updatedData: Partial<User>) => {
     try {
       const response = await userService.updateProfile(updatedData);
-      setCurrentUser(transformUser(response));
+      setCurrentUser(transformUser(response.user));
     } catch (err) {
       console.error('Error updating profile', err);
       throw err;

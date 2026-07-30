@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { SideNavBar } from './components/SideNavBar';
-import { NewChatModal } from './components/NewChatModal';
+import { SearchFriendModal } from './components/SearchFriendModal';
 import { Home } from './pages/Home';
 import { SavedPosts } from './pages/SavedPosts';
 import { Messages } from './pages/Messages';
@@ -44,7 +44,7 @@ const DashboardLayout: React.FC = () => {
       </main>
 
       {/* Launch new conversation modal */}
-      <NewChatModal isOpen={isNewChatOpen} onClose={() => setIsNewChatOpen(false)} />
+      <SearchFriendModal isOpen={isNewChatOpen} onClose={() => setIsNewChatOpen(false)} />
     </div>
   );
 };

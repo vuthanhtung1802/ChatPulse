@@ -22,10 +22,10 @@ export const Profile: React.FC = () => {
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editName, setEditName] = useState(currentUser?.name || '');
-  const [editBio, setEditBio] = useState(currentUser?.bio || '');
-  const [editLocation, setEditLocation] = useState(currentUser?.location || '');
-  const [editWebsite, setEditWebsite] = useState(currentUser?.website || '');
+  const [editName, setEditName] = useState(currentUser?.name ?? '');
+  const [editBio, setEditBio] = useState(currentUser?.bio ?? '');
+  const [editLocation, setEditLocation] = useState(currentUser?.location ?? '');
+  const [editWebsite, setEditWebsite] = useState(currentUser?.website ?? '');
   
   // Custom states for settings sliders
   const [privateProfile, setPrivateProfile] = useState(false);
@@ -35,9 +35,9 @@ export const Profile: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    await updateProfile({
       name: editName,
       bio: editBio,
       location: editLocation,
