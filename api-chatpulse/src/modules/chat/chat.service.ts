@@ -42,7 +42,24 @@ export class ChatService {
     return created.save();
   }
 
-  async getConversationsForUser(userId: string): Promise<any[]> {
+  async hasParticipant(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const convObjectId = new Types.ObjectId(conversationId);
+    const userObjectId = new Types.ObjectId(userId);
+
+    const conversation = await this.conversationModel
+      .findOne({ _id: convObjectId, participants: userObjectId })
+      .select("_id")
+      .exec();
+
+    return conversation !== null;
+  }
+
+  async getConversationsForUser(
+    userId: string,
+  ): Promise<ConversationDocument[]> {
     const userObjectId = new Types.ObjectId(userId);
     return this.conversationModel
       .find({ participants: userObjectId })
@@ -92,7 +109,6 @@ export class ChatService {
     userId: string,
   ): Promise<boolean> {
     const convObjectId = new Types.ObjectId(conversationId);
-    const userObjectId = new Types.ObjectId(userId);
 
     const conversation = await this.conversationModel.findById(convObjectId);
     if (!conversation) {
@@ -167,10 +183,10 @@ export class ChatService {
     conversation.lastMessage = savedMessage._id as Types.ObjectId;
     await conversation.save();
 
-    return savedMessage.populate([
-      { path: "sender", select: "name email avatar" },
-      { path: "conversationId" },
-    ]);
+    return savedMessage.populate({
+      path: "sender",
+      select: "name email avatar",
+    });
   }
 
   async getMessagesForConversation(
@@ -197,7 +213,10 @@ export class ChatService {
     return messages.reverse();
   }
 
-  async recallMessage(messageId: string, userId: string): Promise<MessageDocument> {
+  async recallMessage(
+    messageId: string,
+    userId: string,
+  ): Promise<MessageDocument> {
     const msgObjectId = new Types.ObjectId(messageId);
     const message = await this.messageModel.findById(msgObjectId);
     if (!message) {
@@ -213,10 +232,10 @@ export class ChatService {
     message.attachmentUrl = "";
     message.attachmentType = "";
     const savedMessage = await message.save();
-    return savedMessage.populate([
-      { path: "sender", select: "name email avatar" },
-      { path: "conversationId" },
-    ]);
+    return savedMessage.populate({
+      path: "sender",
+      select: "name email avatar",
+    });
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<boolean> {
@@ -236,16 +255,22 @@ export class ChatService {
     return true;
   }
 
-  async markConversationAsRead(conversationId: string, userId: string): Promise<void> {
+  async markMessagesRead(
+    conversationId: string,
+    userId: string,
+  ): Promise<number> {
     const convObjectId = new Types.ObjectId(conversationId);
     const userObjectId = new Types.ObjectId(userId);
-    await this.messageModel.updateMany(
-      {
-        conversationId: convObjectId,
-        sender: { $ne: userObjectId },
-        status: { $ne: "read" },
-      },
-      { $set: { status: "read" } },
-    ).exec();
+    const result = await this.messageModel
+      .updateMany(
+        {
+          conversationId: convObjectId,
+          sender: { $ne: userObjectId },
+          status: { $ne: "read" },
+        },
+        { $set: { status: "read" } },
+      )
+      .exec();
+    return result.modifiedCount ?? 0;
   }
 }

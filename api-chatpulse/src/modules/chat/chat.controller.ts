@@ -7,11 +7,12 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
 } from "@nestjs/common";
 import { ChatService } from "./chat.service";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
+import { AuthUser } from "../../shared/interfaces/auth-user.interface";
 import { CreateConversationDto } from "./dto/create-conversation.dto";
+import { PaginationDto } from "../../shared/dto/pagination.dto";
 
 @Controller("conversations")
 @UseGuards(JwtAuthGuard)
@@ -20,14 +21,14 @@ export class ChatController {
 
   @Post()
   async createConversation(
-    @Request() req,
+    @CurrentUser() user: AuthUser,
     @Body() createConversationDto: CreateConversationDto,
   ) {
     // Ensure current user is included in the conversation participants
     const participantIds = [
       ...new Set([
         ...createConversationDto.participantIds,
-        req.user._id.toString(),
+        user._id.toString(),
       ]),
     ];
 
@@ -44,9 +45,9 @@ export class ChatController {
   }
 
   @Get()
-  async getConversations(@Request() req) {
+  async getConversations(@CurrentUser() user: AuthUser) {
     const conversations = await this.chatService.getConversationsForUser(
-      req.user._id.toString(),
+      user._id.toString(),
     );
     return { conversations };
   }
@@ -54,40 +55,59 @@ export class ChatController {
   @Get(":id/messages")
   async getMessages(
     @Param("id") conversationId: string,
-    @Request() req,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
+    @CurrentUser() user: AuthUser,
+    @Query() query: PaginationDto,
   ) {
-    const userId = req.user._id.toString();
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    return this.chatService.getMessagesForConversation(conversationId, userId, pageNum, limitNum);
+    const userId = user._id.toString();
+    const pageNum = query.page ?? 1;
+    const limitNum = query.limit ?? 50;
+    return this.chatService.getMessagesForConversation(
+      conversationId,
+      userId,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get(":id")
-  async getConversationDetail(@Param("id") id: string, @Request() req) {
+  async getConversationDetail(
+    @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
     const conversation = await this.chatService.getConversationById(
       id,
-      req.user._id.toString(),
+      user._id.toString(),
     );
     return { conversation };
   }
 
-  @Delete(":id")
-  async deleteConversation(@Param("id") id: string, @Request() req) {
-    await this.chatService.deleteConversation(id, req.user._id.toString());
+  @Delete("messages/:messageId")
+  async deleteMessage(
+    @Param("messageId") messageId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.chatService.deleteMessage(messageId, user._id.toString());
     return { success: true };
   }
 
-  @Delete("messages/:messageId")
-  async deleteMessage(@Param("messageId") messageId: string, @Request() req) {
-    await this.chatService.deleteMessage(messageId, req.user._id.toString());
+  @Delete(":id")
+  async deleteConversation(
+    @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.chatService.deleteConversation(id, user._id.toString());
     return { success: true };
   }
 
   @Post("messages/:messageId/recall")
-  async recallMessage(@Param("messageId") messageId: string, @Request() req) {
-    const message = await this.chatService.recallMessage(messageId, req.user._id.toString());
+  async recallMessage(
+    @Param("messageId") messageId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const message = await this.chatService.recallMessage(
+      messageId,
+      user._id.toString(),
+    );
     return { success: true, message };
   }
 }

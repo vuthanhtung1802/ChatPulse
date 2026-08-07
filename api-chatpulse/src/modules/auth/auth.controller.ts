@@ -4,7 +4,6 @@ import {
   Body,
   Get,
   UseGuards,
-  Request,
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
@@ -12,16 +11,16 @@ import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { JwtRefreshGuard } from "./guards/jwt-refresh.guard";
-import { UsersService } from "../users/users.service";
+import {
+  CurrentUser,
+  JwtAuthGuard,
+  JwtRefreshGuard,
+} from "../../shared/shared.module";
+import { AuthUser } from "../../shared/interfaces/auth-user.interface";
 
 @Controller("auth")
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private usersService: UsersService,
-  ) {}
+  constructor(private authService: AuthService) {}
 
   @Post("register")
   async register(@Body() registerDto: RegisterDto) {
@@ -46,10 +45,10 @@ export class AuthController {
   @Post("logout")
   @HttpCode(HttpStatus.OK)
   async logout(
-    @Request() req,
+    @CurrentUser() user: AuthUser,
     @Body() body?: { refreshToken?: string },
   ) {
-    await this.authService.logout(req.user._id.toString(), body?.refreshToken);
+    await this.authService.logout(user._id.toString(), body?.refreshToken);
     return {
       message: "Logout successful",
     };
@@ -59,32 +58,24 @@ export class AuthController {
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(
-    @Request() req,
+    @CurrentUser() user: AuthUser,
     @Body() refreshTokenDto: RefreshTokenDto,
   ) {
-    const userId = req.user._id.toString();
     return this.authService.refreshTokens(
-      userId,
+      user._id.toString(),
       refreshTokenDto.refreshToken,
     );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get("me")
-  getMe(@Request() req) {
+  getMe(@CurrentUser() user: AuthUser) {
     return {
-      id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-      avatar: req.user.avatar,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
     };
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Get("users")
-  async getUsers(@Request() req) {
-    return this.usersService.findAll(req.user._id.toString());
-  }
-
 }

@@ -1,16 +1,21 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Post, PostDocument } from "./schemas/post.schema";
 import { CreatePostDto } from "./dto/create-post.dto";
+import { CommentsService } from "./comments.service";
+import { CloudinaryService } from "../cloudinary/cloudinary.service";
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    private readonly commentsService: CommentsService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async create(
@@ -31,7 +36,12 @@ export class PostsService {
     page: number = 1,
     limit: number = 10,
     currentUserId?: string,
-  ): Promise<{ posts: PostDocument[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    posts: PostDocument[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const skip = (page - 1) * limit;
     const filter: any = {};
     if (currentUserId) {
@@ -85,19 +95,14 @@ export class PostsService {
     return { posts, total };
   }
 
-  async toggleLike(
-    postId: string,
-    userId: string,
-  ): Promise<PostDocument> {
+  async toggleLike(postId: string, userId: string): Promise<PostDocument> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) {
       throw new NotFoundException("Post not found");
     }
 
     const userIdStr = userId.toString();
-    const isLiked = post.likes.some(
-      (id) => id.toString() === userIdStr,
-    );
+    const isLiked = post.likes.some((id) => id.toString() === userIdStr);
 
     if (isLiked) {
       await this.postModel
@@ -115,19 +120,14 @@ export class PostsService {
       .exec();
   }
 
-  async toggleSave(
-    postId: string,
-    userId: string,
-  ): Promise<PostDocument> {
+  async toggleSave(postId: string, userId: string): Promise<PostDocument> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) {
       throw new NotFoundException("Post not found");
     }
 
     const userIdStr = userId.toString();
-    const isSaved = post.savedBy.some(
-      (id) => id.toString() === userIdStr,
-    );
+    const isSaved = post.savedBy.some((id) => id.toString() === userIdStr);
 
     if (isSaved) {
       await this.postModel
@@ -165,7 +165,11 @@ export class PostsService {
     return { posts, total };
   }
 
-  async delete(postId: string, userId: string, userRole: string): Promise<{ deleted: boolean }> {
+  async delete(
+    postId: string,
+    userId: string,
+    userRole: string,
+  ): Promise<{ deleted: boolean }> {
     const post = await this.postModel.findById(postId).exec();
     if (!post) {
       throw new NotFoundException("Post not found");
@@ -183,5 +187,37 @@ export class PostsService {
       .findByIdAndUpdate(postId, { $addToSet: { hiddenBy: userId } })
       .exec();
     return { deleted: false };
+  }
+
+  toPostView(
+    post: PostDocument,
+    userId: string,
+    savedByMe: boolean = false,
+  ): any {
+    const postObj = post.toObject();
+    return {
+      ...postObj,
+      likedByMe: post.likes.some((id) => id.toString() === userId),
+      savedByMe:
+        savedByMe || post.savedBy.some((id) => id.toString() === userId),
+      commentsCount: 0,
+      shares: 0,
+    };
+  }
+
+  async attachCommentsCount(posts: any[]): Promise<void> {
+    const postIds = posts.map((p) => p._id.toString());
+    const countsMap = await this.commentsService.countByPostIds(postIds);
+    for (const post of posts) {
+      post.commentsCount = countsMap.get(post._id.toString()) || 0;
+    }
+  }
+
+  async uploadFile(file: any): Promise<string> {
+    const uploadResult = await this.cloudinaryService.uploadFile(file, "posts");
+    if (!uploadResult || !uploadResult.secure_url) {
+      throw new BadRequestException("Failed to upload file to Cloudinary");
+    }
+    return uploadResult.secure_url;
   }
 }

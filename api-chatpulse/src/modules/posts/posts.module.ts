@@ -1,4 +1,4 @@
-import { Module, forwardRef } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { PostsService } from "./posts.service";
 import { PostsController } from "./posts.controller";
@@ -7,7 +7,7 @@ import { CommentsController } from "./comments.controller";
 import { Post, PostSchema } from "./schemas/post.schema";
 import { Comment, CommentSchema } from "./schemas/comment.schema";
 import { CloudinaryModule } from "../cloudinary/cloudinary.module";
-import { AuthModule } from "../auth/auth.module";
+import { SharedModule } from "../../shared/shared.module";
 
 @Module({
   imports: [
@@ -16,7 +16,7 @@ import { AuthModule } from "../auth/auth.module";
       { name: Comment.name, schema: CommentSchema },
     ]),
     CloudinaryModule,
-    forwardRef(() => AuthModule),
+    SharedModule,
   ],
   controllers: [PostsController, CommentsController],
   providers: [PostsService, CommentsService],

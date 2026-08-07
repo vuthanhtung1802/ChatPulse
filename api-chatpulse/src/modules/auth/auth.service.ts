@@ -100,7 +100,9 @@ export class AuthService {
   }
 
   async logout(userId: string, _refreshToken?: string): Promise<void> {
+    void _refreshToken;
     await this.usersService.removeAllRefreshTokens(userId);
+    await this.usersService.updateStatus(userId, "offline");
   }
 
   async refreshTokens(

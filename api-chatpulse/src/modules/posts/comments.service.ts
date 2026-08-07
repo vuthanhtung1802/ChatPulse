@@ -52,10 +52,12 @@ export class CommentsService {
   }
 
   async countByPostIds(postIds: string[]): Promise<Map<string, number>> {
-    const counts = await this.commentModel.aggregate([
-      { $match: { post: { $in: postIds.map((id) => id.toString()) } } },
-      { $group: { _id: "$post", count: { $sum: 1 } } },
-    ]).exec();
+    const counts = await this.commentModel
+      .aggregate([
+        { $match: { post: { $in: postIds.map((id) => id.toString()) } } },
+        { $group: { _id: "$post", count: { $sum: 1 } } },
+      ])
+      .exec();
     const map = new Map<string, number>();
     for (const item of counts) {
       map.set(item._id.toString(), item.count);

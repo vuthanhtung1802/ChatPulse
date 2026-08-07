@@ -7,45 +7,44 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
   BadRequestException,
 } from "@nestjs/common";
 import { CommentsService } from "./comments.service";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
+import { AuthUser } from "../../shared/interfaces/auth-user.interface";
+import { PaginationDto } from "../../shared/dto/pagination.dto";
 
 @Controller("posts")
 @UseGuards(JwtAuthGuard)
 export class CommentsController {
-  constructor(
-    private readonly commentsService: CommentsService,
-  ) {}
+  constructor(private readonly commentsService: CommentsService) {}
 
   @Post(":id/comments")
   async create(
     @Param("id") postId: string,
     @Body("content") content: string,
-    @Request() req,
+    @CurrentUser() user: AuthUser,
   ) {
     if (!content || !content.trim()) {
       throw new BadRequestException("Content is required");
     }
     const comment = await this.commentsService.create(
       postId,
-      req.user._id.toString(),
+      user._id.toString(),
       content,
     );
     return { comment };
   }
 
   @Get(":id/comments")
-  async findByPost(
-    @Param("id") postId: string,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
-  ) {
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 20;
-    const result = await this.commentsService.findByPost(postId, pageNum, limitNum);
+  async findByPost(@Param("id") postId: string, @Query() query: PaginationDto) {
+    const pageNum = query.page ?? 1;
+    const limitNum = query.limit ?? 20;
+    const result = await this.commentsService.findByPost(
+      postId,
+      pageNum,
+      limitNum,
+    );
     return {
       comments: result.comments.map((c) => ({
         ...c.toObject(),
@@ -57,14 +56,13 @@ export class CommentsController {
 
   @Delete(":postId/comments/:commentId")
   async delete(
-    @Param("postId") postId: string,
     @Param("commentId") commentId: string,
-    @Request() req,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.commentsService.delete(
       commentId,
-      req.user._id.toString(),
-      req.user.role,
+      user._id.toString(),
+      user.role,
     );
     return { success: true };
   }
