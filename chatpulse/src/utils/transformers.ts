@@ -70,7 +70,8 @@ export const transformMessage = (msg: any): Message => {
     senderAvatar: msg.sender?.avatar || getInitialsAvatar(msg.sender?.name),
     timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: msg.isRecalled ? undefined : (msg.status || 'sent'),
-    attachmentUrl: msg.isRecalled ? undefined : msg.attachmentUrl,
-    attachmentType: msg.isRecalled ? undefined : msg.attachmentType
+    attachmentUrl: msg.isRecalled ? undefined : (msg.attachmentUrl || undefined),
+    attachmentType: msg.isRecalled ? undefined : (msg.attachmentType || undefined),
+    isRecalled: !!msg.isRecalled,
   };
 };

@@ -8,5 +8,6 @@ export interface Message {
   status?: 'sent' | 'delivered' | 'read';
   attachmentUrl?: string;
   attachmentType?: 'image' | 'video';
+  isRecalled?: boolean;
 }
 
