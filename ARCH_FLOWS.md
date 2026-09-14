@@ -49,13 +49,13 @@ Request → 401
 
 Refresh token dùng secret riêng. Backend lưu bcrypt hash của token và xoay vòng cả hai token khi refresh. `POST /api/auth/logout` xóa refresh token đã lưu và đặt user `offline`.
 
-| Method | Endpoint | Chức năng |
-|---|---|---|
-| POST | `/api/auth/register` | Đăng ký |
-| POST | `/api/auth/login` | Đăng nhập |
-| POST | `/api/auth/refresh` | Xoay vòng token |
-| POST | `/api/auth/logout` | Đăng xuất |
-| GET | `/api/auth/me` | Lấy user hiện tại |
+| Method | Endpoint             | Chức năng         |
+| ------ | -------------------- | ----------------- |
+| POST   | `/api/auth/register` | Đăng ký           |
+| POST   | `/api/auth/login`    | Đăng nhập         |
+| POST   | `/api/auth/refresh`  | Xoay vòng token   |
+| POST   | `/api/auth/logout`   | Đăng xuất         |
+| GET    | `/api/auth/me`       | Lấy user hiện tại |
 
 ## 3. Socket và presence
 
@@ -111,39 +111,39 @@ Hiện chưa có owner/admin nhóm, đổi ảnh/tên sau khi tạo hoặc quả
 
 Friends dùng REST để đọc và Socket.IO để thay đổi realtime.
 
-| Client → Server | Payload |
-|---|---|
-| `sendFriendRequest` | `{ to }` |
-| `acceptFriendRequest` | `{ requestId }` |
+| Client → Server        | Payload         |
+| ---------------------- | --------------- |
+| `sendFriendRequest`    | `{ to }`        |
+| `acceptFriendRequest`  | `{ requestId }` |
 | `declineFriendRequest` | `{ requestId }` |
-| `removeFriend` | `{ friendId }` |
+| `removeFriend`         | `{ friendId }`  |
 
-| Server → Client | Ý nghĩa |
-|---|---|
-| `friendRequestReceived` | Có lời mời mới |
+| Server → Client         | Ý nghĩa                |
+| ----------------------- | ---------------------- |
+| `friendRequestReceived` | Có lời mời mới         |
 | `friendRequestAccepted` | Lời mời được chấp nhận |
-| `friendRequestDeclined` | Lời mời bị từ chối |
-| `friendRemoved` | Bị hủy kết bạn |
+| `friendRequestDeclined` | Lời mời bị từ chối     |
+| `friendRemoved`         | Bị hủy kết bạn         |
 
 Nếu hai user gửi lời mời ngược chiều, service tự chuyển quan hệ thành accepted. Notifications hiện được tổng hợp ở frontend từ incoming requests và socket events; trạng thái đọc/xóa chưa lưu trong MongoDB.
 
 ## 9. Socket events của chat
 
-| Chiều | Event | Payload |
-|---|---|---|
-| Client → Server | `joinConversation` | `{ conversationId }` |
-| Client → Server | `leaveConversation` | `{ conversationId }` |
-| Client → Server | `sendMessage` | `{ conversationId, content?, attachmentUrl?, attachmentType?, clientMessageId, replyTo? }` |
-| Client → Server | `typing` | `{ conversationId, isTyping }` |
-| Client → Server | `seenMessage` | `{ conversationId }` |
-| Client → Server | `recallMessage` | `{ messageId }` |
-| Client → Server | `toggleReaction` | `{ messageId, emoji }` |
-| Server → Client | `messageReceived` | Message đã populate sender và replyTo |
-| Server → Client | `messageSeen` | `{ conversationId, seenBy }` |
-| Server → Client | `messageRecalled` | `{ conversationId, messageId }` |
-| Server → Client | `messageReactionUpdated` | `{ conversationId, messageId, reactions }` |
-| Server → Client | `typing` | `{ conversationId, userId, isTyping }` |
-| Server → Client | `userStatusChanged` | `{ userId, status }` |
+| Chiều           | Event                    | Payload                                                                                    |
+| --------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| Client → Server | `joinConversation`       | `{ conversationId }`                                                                       |
+| Client → Server | `leaveConversation`      | `{ conversationId }`                                                                       |
+| Client → Server | `sendMessage`            | `{ conversationId, content?, attachmentUrl?, attachmentType?, clientMessageId, replyTo? }` |
+| Client → Server | `typing`                 | `{ conversationId, isTyping }`                                                             |
+| Client → Server | `seenMessage`            | `{ conversationId }`                                                                       |
+| Client → Server | `recallMessage`          | `{ messageId }`                                                                            |
+| Client → Server | `toggleReaction`         | `{ messageId, emoji }`                                                                     |
+| Server → Client | `messageReceived`        | Message đã populate sender và replyTo                                                      |
+| Server → Client | `messageSeen`            | `{ conversationId, seenBy }`                                                               |
+| Server → Client | `messageRecalled`        | `{ conversationId, messageId }`                                                            |
+| Server → Client | `messageReactionUpdated` | `{ conversationId, messageId, reactions }`                                                 |
+| Server → Client | `typing`                 | `{ conversationId, userId, isTyping }`                                                     |
+| Server → Client | `userStatusChanged`      | `{ userId, status }`                                                                       |
 
 ## 10. REST API
 
@@ -151,48 +151,48 @@ Trừ register, login và refresh, các endpoint sau yêu cầu access token.
 
 ### Users và friends
 
-| Method | Endpoint | Chức năng |
-|---|---|---|
-| GET | `/api/users` | Danh sách user, loại user hiện tại |
-| GET | `/api/users/search?q=...` | Tìm user |
-| GET | `/api/users/:id` | Hồ sơ công khai |
-| PUT | `/api/users/profile` | Sửa hồ sơ của mình |
-| PUT | `/api/users/password` | Đổi mật khẩu |
-| PUT | `/api/users/:id/avatar` | Upload avatar |
-| GET/POST | `/api/users/:id/gallery` | Xem/upload gallery |
-| POST | `/api/users/upload` | Upload attachment |
-| GET | `/api/friends` | Danh sách bạn bè |
-| GET | `/api/friends/requests/incoming` | Lời mời nhận được |
-| GET | `/api/friends/requests/sent` | Lời mời đã gửi |
-| GET | `/api/friends/statuses?ids=...` | Trạng thái quan hệ theo user ID |
+| Method   | Endpoint                         | Chức năng                          |
+| -------- | -------------------------------- | ---------------------------------- |
+| GET      | `/api/users`                     | Danh sách user, loại user hiện tại |
+| GET      | `/api/users/search?q=...`        | Tìm user                           |
+| GET      | `/api/users/:id`                 | Hồ sơ công khai                    |
+| PUT      | `/api/users/profile`             | Sửa hồ sơ của mình                 |
+| PUT      | `/api/users/password`            | Đổi mật khẩu                       |
+| PUT      | `/api/users/:id/avatar`          | Upload avatar                      |
+| GET/POST | `/api/users/:id/gallery`         | Xem/upload gallery                 |
+| POST     | `/api/users/upload`              | Upload attachment                  |
+| GET      | `/api/friends`                   | Danh sách bạn bè                   |
+| GET      | `/api/friends/requests/incoming` | Lời mời nhận được                  |
+| GET      | `/api/friends/requests/sent`     | Lời mời đã gửi                     |
+| GET      | `/api/friends/statuses?ids=...`  | Trạng thái quan hệ theo user ID    |
 
 ### Conversations
 
-| Method | Endpoint | Chức năng |
-|---|---|---|
-| POST | `/api/conversations` | Tạo/lấy chat 1–1 hoặc tạo nhóm |
-| GET | `/api/conversations` | Danh sách hội thoại chưa ẩn |
-| GET | `/api/conversations/:id` | Chi tiết hội thoại |
-| GET | `/api/conversations/:id/messages` | Lịch sử có phân trang |
-| DELETE | `/api/conversations/:id` | Ẩn chat 1–1 hoặc rời nhóm |
-| DELETE | `/api/conversations/messages/:messageId` | Xóa tin phía mình |
-| POST | `/api/conversations/messages/:messageId/recall` | Thu hồi tin |
-| POST | `/api/conversations/messages/:messageId/reactions` | Bật/tắt reaction qua REST |
+| Method | Endpoint                                           | Chức năng                      |
+| ------ | -------------------------------------------------- | ------------------------------ |
+| POST   | `/api/conversations`                               | Tạo/lấy chat 1–1 hoặc tạo nhóm |
+| GET    | `/api/conversations`                               | Danh sách hội thoại chưa ẩn    |
+| GET    | `/api/conversations/:id`                           | Chi tiết hội thoại             |
+| GET    | `/api/conversations/:id/messages`                  | Lịch sử có phân trang          |
+| DELETE | `/api/conversations/:id`                           | Ẩn chat 1–1 hoặc rời nhóm      |
+| DELETE | `/api/conversations/messages/:messageId`           | Xóa tin phía mình              |
+| POST   | `/api/conversations/messages/:messageId/recall`    | Thu hồi tin                    |
+| POST   | `/api/conversations/messages/:messageId/reactions` | Bật/tắt reaction qua REST      |
 
 ### Posts và comments
 
-| Method | Endpoint | Chức năng |
-|---|---|---|
-| POST/GET | `/api/posts` | Tạo bài / lấy feed phân trang |
-| GET | `/api/posts/saved` | Bài đã lưu |
-| GET | `/api/posts/:id` | Chi tiết bài |
-| GET | `/api/posts/user/:userId` | Bài của user |
-| POST | `/api/posts/:id/like` | Bật/tắt like |
-| POST | `/api/posts/:id/save` | Bật/tắt save |
-| DELETE | `/api/posts/:id` | Xóa theo quyền owner/admin |
-| POST | `/api/posts/upload` | Upload media |
-| POST/GET | `/api/posts/:id/comments` | Tạo/lấy bình luận |
-| DELETE | `/api/posts/:postId/comments/:commentId` | Xóa bình luận theo quyền |
+| Method   | Endpoint                                 | Chức năng                     |
+| -------- | ---------------------------------------- | ----------------------------- |
+| POST/GET | `/api/posts`                             | Tạo bài / lấy feed phân trang |
+| GET      | `/api/posts/saved`                       | Bài đã lưu                    |
+| GET      | `/api/posts/:id`                         | Chi tiết bài                  |
+| GET      | `/api/posts/user/:userId`                | Bài của user                  |
+| POST     | `/api/posts/:id/like`                    | Bật/tắt like                  |
+| POST     | `/api/posts/:id/save`                    | Bật/tắt save                  |
+| DELETE   | `/api/posts/:id`                         | Xóa theo quyền owner/admin    |
+| POST     | `/api/posts/upload`                      | Upload media                  |
+| POST/GET | `/api/posts/:id/comments`                | Tạo/lấy bình luận             |
+| DELETE   | `/api/posts/:postId/comments/:commentId` | Xóa bình luận theo quyền      |
 
 ## 11. Mô hình dữ liệu chính
 
@@ -226,4 +226,5 @@ Comment: post, author, content
 - Chưa có tìm kiếm message phía server và chặn user.
 - Group chưa có owner/admin và quản lý thành viên.
 - Refresh token nằm trong `sessionStorage`, chưa dùng httpOnly cookie.
-- CORS đang dùng `origin: true`; production nên giới hạn domain bằng cấu hình.
+- REST và Socket.IO chỉ chấp nhận các origin trong `CORS_ORIGINS` (phân tách
+  bằng dấu phẩy). Mặc định local là `http://localhost:3000`.

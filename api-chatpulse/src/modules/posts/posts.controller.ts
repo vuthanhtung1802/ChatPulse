@@ -17,6 +17,7 @@ import { CreatePostDto } from "./dto/create-post.dto";
 import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
 import { AuthUser } from "../../shared/interfaces/auth-user.interface";
 import { PaginationDto } from "../../shared/dto/pagination.dto";
+import type { Express } from "express";
 
 @Controller("posts")
 @UseGuards(JwtAuthGuard)

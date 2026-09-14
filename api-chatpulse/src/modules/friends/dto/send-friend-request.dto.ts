@@ -4,4 +4,4 @@ export class SendFriendRequestDto {
   @IsNotEmpty()
   @IsMongoId()
   to: string;
-} 
+}

@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { usePosts } from '../PostsContext';
-import { useAuth } from '../../auth/AuthContext';
-import { postService } from '../services/posts.service';
-import { PostCard } from '../components/PostCard';
-import { PostSkeleton, containerVariants } from '../components/PostSkeleton';
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { usePosts } from "../PostsContext";
+import { useAuth } from "../../auth/AuthContext";
+import { postService } from "../services/posts.service";
+import { PostCard } from "../components/PostCard";
+import { PostSkeleton, containerVariants } from "../components/PostSkeleton";
 import {
   Image as ImageIcon,
   Smile,
@@ -13,23 +13,23 @@ import {
   SlidersHorizontal,
   X,
   Loader2,
-} from 'lucide-react';
+} from "lucide-react";
 
 const moods = [
-  'Feeling happy 😊',
-  'Feeling loved ❤️',
-  'Feeling excited 🤩',
-  'Feeling sad 😢',
-  'Feeling grateful 🙌',
+  "Feeling happy 😊",
+  "Feeling loved ❤️",
+  "Feeling excited 🤩",
+  "Feeling sad 😢",
+  "Feeling grateful 🙌",
 ];
 
 export const Home: React.FC = () => {
   const { posts, postsLoading, createPost } = usePosts();
   const { currentUser } = useAuth();
-  const [postText, setPostText] = useState('');
-  const [selectedMood, setSelectedMood] = useState('');
+  const [postText, setPostText] = useState("");
+  const [selectedMood, setSelectedMood] = useState("");
   const [showMoodMenu, setShowMoodMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -63,7 +63,7 @@ export const Home: React.FC = () => {
         const results = await Promise.all(uploadPromises);
         imageUrls = results.map((r) => r.url);
       } catch (err) {
-        console.error('Error uploading images', err);
+        console.error("Error uploading images", err);
         setUploadingImages(false);
         return;
       }
@@ -71,7 +71,7 @@ export const Home: React.FC = () => {
     }
 
     await createPost(postText, imageUrls, selectedMood || undefined);
-    setPostText('');
+    setPostText("");
     setSelectedFiles([]);
     previewUrls.forEach((url) => URL.revokeObjectURL(url));
     setPreviewUrls([]);
@@ -87,14 +87,19 @@ export const Home: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
       <header className="h-16 border-b border-outline-variant/60 bg-surface-container-lowest flex items-center justify-between px-6 z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <h2 className="font-display font-bold text-lg text-on-surface">Team Feed</h2>
+          <h2 className="font-display font-bold text-lg text-on-surface">
+            Team Feed
+          </h2>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary-container/40 text-on-secondary-container border border-secondary-container/40">
             Social updates
           </span>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-2.5 text-on-surface-variant/50" />
+            <Search
+              size={16}
+              className="absolute left-3 top-2.5 text-on-surface-variant/50"
+            />
             <input
               type="text"
               value={searchQuery}
@@ -128,7 +133,7 @@ export const Home: React.FC = () => {
                   <textarea
                     value={postText}
                     onChange={(e) => setPostText(e.target.value)}
-                    placeholder={`What's on your mind, ${currentUser.name.split(' ')[0]}? Share an update...`}
+                    placeholder={`What's on your mind, ${currentUser.name.split(" ")[0]}? Share an update...`}
                     rows={2}
                     className="w-full bg-transparent border-0 focus:ring-0 text-sm resize-none text-on-surface placeholder:text-on-surface-variant/50 outline-hidden"
                   />
@@ -138,7 +143,7 @@ export const Home: React.FC = () => {
                       <span>{selectedMood}</span>
                       <button
                         type="button"
-                        onClick={() => setSelectedMood('')}
+                        onClick={() => setSelectedMood("")}
                         className="hover:text-error text-on-surface-variant cursor-pointer text-xs font-bold"
                       >
                         ×
@@ -230,7 +235,10 @@ export const Home: React.FC = () => {
 
                     <button
                       type="submit"
-                      disabled={(!postText.trim() && selectedFiles.length === 0) || uploadingImages}
+                      disabled={
+                        (!postText.trim() && selectedFiles.length === 0) ||
+                        uploadingImages
+                      }
                       className="px-4 py-2 bg-primary text-on-primary text-xs font-semibold rounded-xl flex items-center gap-1.5 hover:bg-primary-container hover:text-on-primary-container disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer"
                     >
                       {uploadingImages ? (
@@ -238,7 +246,9 @@ export const Home: React.FC = () => {
                       ) : (
                         <Send size={13} />
                       )}
-                      <span>{uploadingImages ? 'Uploading...' : 'Publish'}</span>
+                      <span>
+                        {uploadingImages ? "Uploading..." : "Publish"}
+                      </span>
                     </button>
                   </div>
                 </form>
@@ -262,14 +272,18 @@ export const Home: React.FC = () => {
           >
             <AnimatePresence mode="popLayout">
               {filteredPosts.length > 0 ? (
-                filteredPosts.map((post) => <PostCard key={post._id} post={post} />)
+                filteredPosts.map((post) => (
+                  <PostCard key={post._id} post={post} />
+                ))
               ) : (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-2xl"
                 >
-                  <p className="text-sm text-on-surface-variant">No social posts match your query.</p>
+                  <p className="text-sm text-on-surface-variant">
+                    No social posts match your query.
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>

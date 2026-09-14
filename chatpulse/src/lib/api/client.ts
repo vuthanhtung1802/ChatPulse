@@ -1,8 +1,8 @@
-import axios from 'axios';
-import { API_URL } from '../../config/env';
+import axios from "axios";
+import { API_URL } from "../../config/env";
 
-export const ACCESS_TOKEN_KEY = 'chatpulse_accessToken';
-export const REFRESH_TOKEN_KEY = 'chatpulse_refreshToken';
+export const ACCESS_TOKEN_KEY = "chatpulse_accessToken";
+export const REFRESH_TOKEN_KEY = "chatpulse_refreshToken";
 
 export const tokenStorage = {
   getAccessToken: () => sessionStorage.getItem(ACCESS_TOKEN_KEY),
@@ -21,7 +21,7 @@ export const tokenStorage = {
 
 export const notifyUnauthorized = () => {
   tokenStorage.clearTokens();
-  window.dispatchEvent(new CustomEvent('auth-unauthorized'));
+  window.dispatchEvent(new CustomEvent("auth-unauthorized"));
 };
 
 export const apiClient = axios.create({
@@ -64,7 +64,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (originalRequest.url === '/auth/refresh') {
+      if (originalRequest.url === "/auth/refresh") {
         notifyUnauthorized();
         return Promise.reject(error);
       }
@@ -93,9 +93,8 @@ apiClient.interceptors.response.use(
         const { accessToken, refreshToken: newRefreshToken } = response.data;
         tokenStorage.setTokens(accessToken, newRefreshToken);
 
-        apiClient.defaults.headers.common[
-          'Authorization'
-        ] = `Bearer ${accessToken}`;
+        apiClient.defaults.headers.common["Authorization"] =
+          `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);

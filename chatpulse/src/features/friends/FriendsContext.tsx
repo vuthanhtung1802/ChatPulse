@@ -1,7 +1,11 @@
-import React, { createContext, useContext } from 'react';
-import { FriendItem, FriendRequest, RelationshipInfo } from '../../types/Friend';
-import { useAuth } from '../auth/AuthContext';
-import { useFriendsState } from './useFriends';
+import React, { createContext, useContext } from "react";
+import {
+  FriendItem,
+  FriendRequest,
+  RelationshipInfo,
+} from "../../types/Friend";
+import { useAuth } from "../auth/AuthContext";
+import { useFriendsState } from "./useFriends";
 
 interface FriendsContextValue {
   friends: FriendItem[];
@@ -33,7 +37,7 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useFriends = () => {
   const context = useContext(FriendsContext);
   if (context === undefined) {
-    throw new Error('useFriends must be used within a FriendsProvider');
+    throw new Error("useFriends must be used within a FriendsProvider");
   }
   return context;
 };

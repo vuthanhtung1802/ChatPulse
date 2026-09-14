@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import {
@@ -162,7 +167,9 @@ export class ChatService {
     const senderObjectId = new Types.ObjectId(senderId);
     const convObjectId = new Types.ObjectId(conversationId);
     if (!content.trim() && !attachmentUrl) {
-      throw new BadRequestException("Message content or attachment is required");
+      throw new BadRequestException(
+        "Message content or attachment is required",
+      );
     }
 
     // Verify conversation exists and sender is participant
@@ -189,7 +196,10 @@ export class ChatService {
         clientMessageId,
       });
       if (existing) {
-        return existing.populate({ path: "sender", select: "name email avatar" });
+        return existing.populate({
+          path: "sender",
+          select: "name email avatar",
+        });
       }
     }
 
@@ -199,7 +209,8 @@ export class ChatService {
         _id: new Types.ObjectId(replyTo),
         conversationId: convObjectId,
       });
-      if (!repliedMessage) throw new NotFoundException("Replied message not found");
+      if (!repliedMessage)
+        throw new NotFoundException("Replied message not found");
       replyObjectId = repliedMessage._id as Types.ObjectId;
     }
 
@@ -219,7 +230,10 @@ export class ChatService {
     conversation.lastMessage = savedMessage._id as Types.ObjectId;
     await conversation.save();
 
-    await savedMessage.populate({ path: "sender", select: "name email avatar" });
+    await savedMessage.populate({
+      path: "sender",
+      select: "name email avatar",
+    });
     return savedMessage.populate({
       path: "replyTo",
       select: "content sender isRecalled",
@@ -234,7 +248,9 @@ export class ChatService {
     limit: number = 50,
   ): Promise<MessageDocument[]> {
     if (!(await this.hasParticipant(conversationId, userId))) {
-      throw new ForbiddenException("You are not a participant of this conversation");
+      throw new ForbiddenException(
+        "You are not a participant of this conversation",
+      );
     }
     const convObjectId = new Types.ObjectId(conversationId);
     const userObjectId = new Types.ObjectId(userId);
@@ -291,8 +307,12 @@ export class ChatService {
     if (!message) {
       throw new NotFoundException("Message not found");
     }
-    if (!(await this.hasParticipant(message.conversationId.toString(), userId))) {
-      throw new ForbiddenException("You are not a participant of this conversation");
+    if (
+      !(await this.hasParticipant(message.conversationId.toString(), userId))
+    ) {
+      throw new ForbiddenException(
+        "You are not a participant of this conversation",
+      );
     }
 
     // Add to deletedBy list if not already present
@@ -309,7 +329,9 @@ export class ChatService {
     userId: string,
   ): Promise<number> {
     if (!(await this.hasParticipant(conversationId, userId))) {
-      throw new ForbiddenException("You are not a participant of this conversation");
+      throw new ForbiddenException(
+        "You are not a participant of this conversation",
+      );
     }
     const convObjectId = new Types.ObjectId(conversationId);
     const userObjectId = new Types.ObjectId(userId);
@@ -326,16 +348,26 @@ export class ChatService {
     return result.modifiedCount ?? 0;
   }
 
-  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageDocument> {
+  async toggleReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<MessageDocument> {
     const allowed = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
-    if (!allowed.includes(emoji)) throw new ForbiddenException("Unsupported reaction");
+    if (!allowed.includes(emoji))
+      throw new ForbiddenException("Unsupported reaction");
     const message = await this.messageModel.findById(messageId);
     if (!message) throw new NotFoundException("Message not found");
-    if (!(await this.hasParticipant(message.conversationId.toString(), userId))) {
-      throw new ForbiddenException("You are not a participant of this conversation");
+    if (
+      !(await this.hasParticipant(message.conversationId.toString(), userId))
+    ) {
+      throw new ForbiddenException(
+        "You are not a participant of this conversation",
+      );
     }
     const index = message.reactions.findIndex(
-      (reaction) => reaction.user.toString() === userId && reaction.emoji === emoji,
+      (reaction) =>
+        reaction.user.toString() === userId && reaction.emoji === emoji,
     );
     if (index >= 0) message.reactions.splice(index, 1);
     else message.reactions.push({ user: new Types.ObjectId(userId), emoji });

@@ -6,7 +6,7 @@ export interface User {
   avatar: string;
   role: string;
   plan: string;
-  status: 'online' | 'offline';
+  status: "online" | "offline";
   bio?: string;
   location?: string;
   website?: string;

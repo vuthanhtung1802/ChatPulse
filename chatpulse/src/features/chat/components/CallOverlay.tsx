@@ -1,10 +1,10 @@
-import React from 'react';
-import { Phone, PhoneOff, Sparkles, UserCheck, Video } from 'lucide-react';
-import { Conversation } from '../../../types/types';
+import React from "react";
+import { Phone, PhoneOff, Sparkles, UserCheck, Video } from "lucide-react";
+import { Conversation } from "../../../types/types";
 
 interface CallOverlayProps {
   conversation: Conversation;
-  callType: 'voice' | 'video';
+  callType: "voice" | "video";
   duration: number;
   onEnd: () => void;
 }
@@ -12,7 +12,7 @@ interface CallOverlayProps {
 const formatDuration = (sec: number) => {
   const mins = Math.floor(sec / 60);
   const secs = sec % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 };
 
 export const CallOverlay: React.FC<CallOverlayProps> = ({
@@ -31,7 +31,7 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
           className="w-24 h-24 rounded-2xl object-cover ring-4 ring-primary animate-pulse"
         />
         <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-4 border-neutral-900">
-          {callType === 'video' ? (
+          {callType === "video" ? (
             <Video size={12} className="text-white" />
           ) : (
             <Phone size={12} className="text-white" />
@@ -44,20 +44,23 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
           {conversation.participantName}
         </h3>
         <p className="text-primary-container text-xs font-semibold uppercase tracking-widest mt-1.5 animate-pulse">
-          {callType === 'video' ? 'VIDEO CALL ACTIVE' : 'VOICE CALL ACTIVE'}
+          {callType === "video" ? "VIDEO CALL ACTIVE" : "VOICE CALL ACTIVE"}
         </p>
         <p className="text-white/60 font-mono text-sm mt-3">
           {formatDuration(duration)}
         </p>
       </div>
 
-      {callType === 'video' && (
+      {callType === "video" && (
         <div className="w-full h-44 rounded-2xl bg-neutral-800 border border-neutral-700 overflow-hidden relative shadow-2xl flex items-center justify-center text-neutral-500 text-xs">
           <div className="absolute bottom-2 right-2 w-14 h-20 rounded-lg bg-neutral-700 border border-neutral-600 overflow-hidden shadow-md flex items-center justify-center">
             <UserCheck size={14} className="text-neutral-400" />
           </div>
           <div className="text-center space-y-1.5 p-4">
-            <Sparkles size={20} className="mx-auto text-primary animate-bounce" />
+            <Sparkles
+              size={20}
+              className="mx-auto text-primary animate-bounce"
+            />
             <span className="font-sans font-medium text-[11px] text-white/80">
               Rendering video layout sync...
             </span>

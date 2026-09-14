@@ -15,21 +15,23 @@ import { ConfigService } from "@nestjs/config";
 import { Server, Socket } from "socket.io";
 import { ChatService } from "./chat.service";
 import { UsersService } from "../users/users.service";
-import { FriendsService } from "../friends/friends.service";
+import { FriendsRealtimeService } from "../friends/friends-realtime.service";
 import { FriendRequestDocument } from "../friends/schemas/friend-request.schema";
 import { ConversationDocument } from "./schemas/conversation.schema";
 import {
   conversationRoom,
-  getErrorMessage,
   SendMessagePayload,
   SocketAck,
   TypingPayload,
   userRoom,
 } from "./chat-realtime.types";
+import { parseCorsOrigins } from "../../config/environment";
 
 @WebSocketGateway({
   cors: {
-    origin: true,
+    origin: parseCorsOrigins(
+      process.env.CORS_ORIGINS || "http://localhost:3000",
+    ),
     credentials: true,
   },
 })
@@ -47,7 +49,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatService: ChatService,
     private readonly usersService: UsersService,
-    private readonly friendsService: FriendsService,
+    private readonly friendsRealtime: FriendsRealtimeService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -263,25 +265,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { to: string },
     @Ack() acknowledge?: SocketAck<FriendRequestDocument>,
   ): Promise<void> {
-    try {
-      const userId = client.data.userId as string;
-      const request = await this.friendsService.sendRequest(userId, payload.to);
-      const populated = await this.friendsService.findRequestById(
-        request._id.toString(),
-      );
-      if (populated.status === "accepted") {
-        this.server
-          .to(userRoom(payload.to))
-          .emit("friendRequestAccepted", { request: populated });
-      } else {
-        this.server
-          .to(userRoom(payload.to))
-          .emit("friendRequestReceived", { request: populated });
-      }
-      acknowledge?.({ ok: true, data: populated });
-    } catch (error) {
-      acknowledge?.({ ok: false, error: getErrorMessage(error) });
-    }
+    await this.friendsRealtime.sendRequest(
+      this.server,
+      client.data.userId as string,
+      payload.to,
+      acknowledge,
+    );
   }
 
   @SubscribeMessage("acceptFriendRequest")
@@ -290,22 +279,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { requestId: string },
     @Ack() acknowledge?: SocketAck<FriendRequestDocument>,
   ): Promise<void> {
-    try {
-      const userId = client.data.userId as string;
-      const request = await this.friendsService.acceptRequest(
-        payload.requestId,
-        userId,
-      );
-      const populated = await this.friendsService.findRequestById(
-        request._id.toString(),
-      );
-      this.server
-        .to(userRoom(request.requester.toString()))
-        .emit("friendRequestAccepted", { request: populated });
-      acknowledge?.({ ok: true, data: populated });
-    } catch (error) {
-      acknowledge?.({ ok: false, error: getErrorMessage(error) });
-    }
+    await this.friendsRealtime.acceptRequest(
+      this.server,
+      client.data.userId as string,
+      payload.requestId,
+      acknowledge,
+    );
   }
 
   @SubscribeMessage("declineFriendRequest")
@@ -314,22 +293,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { requestId: string },
     @Ack() acknowledge?: SocketAck,
   ): Promise<void> {
-    try {
-      const userId = client.data.userId as string;
-      const request = await this.friendsService.declineRequest(
-        payload.requestId,
-        userId,
-      );
-      this.server
-        .to(userRoom(request.requester.toString()))
-        .emit("friendRequestDeclined", {
-          requestId: request._id.toString(),
-          declinedBy: userId,
-        });
-      acknowledge?.({ ok: true });
-    } catch (error) {
-      acknowledge?.({ ok: false, error: getErrorMessage(error) });
-    }
+    await this.friendsRealtime.declineRequest(
+      this.server,
+      client.data.userId as string,
+      payload.requestId,
+      acknowledge,
+    );
   }
 
   @SubscribeMessage("removeFriend")
@@ -338,15 +307,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { friendId: string },
     @Ack() acknowledge?: SocketAck,
   ): Promise<void> {
-    try {
-      const userId = client.data.userId as string;
-      await this.friendsService.removeFriend(userId, payload.friendId);
-      this.server
-        .to(userRoom(payload.friendId))
-        .emit("friendRemoved", { by: userId });
-      acknowledge?.({ ok: true });
-    } catch (error) {
-      acknowledge?.({ ok: false, error: getErrorMessage(error) });
-    }
+    await this.friendsRealtime.removeFriend(
+      this.server,
+      client.data.userId as string,
+      payload.friendId,
+      acknowledge,
+    );
   }
 }

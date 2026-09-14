@@ -1,11 +1,15 @@
-import React from 'react';
-import { Image as ImageIcon, Paperclip, Send } from 'lucide-react';
-import { userService } from '../../users/services/user.service';
-import { Message } from '../../../types/types';
+import React from "react";
+import { Image as ImageIcon, Paperclip, Send } from "lucide-react";
+import { userService } from "../../users/services/user.service";
+import { Message } from "../../../types/types";
 
 interface ChatInputProps {
   placeholder: string;
-  onSendMessage: (text: string, attachmentUrl?: string, attachmentType?: 'image' | 'video') => void;
+  onSendMessage: (
+    text: string,
+    attachmentUrl?: string,
+    attachmentType?: "image" | "video",
+  ) => void;
   onTyping?: (isTyping: boolean) => void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
@@ -18,7 +22,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   replyingTo,
   onCancelReply,
 }) => {
-  const [inputText, setInputText] = React.useState('');
+  const [inputText, setInputText] = React.useState("");
   const [showAttachmentMenu, setShowAttachmentMenu] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -26,27 +30,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.preventDefault();
     if (!inputText.trim()) return;
     onSendMessage(inputText.trim());
-    setInputText('');
+    setInputText("");
     if (onTyping) onTyping(false);
   };
 
-  const handleSendAttachment = (type: 'image' | 'file') => {
+  const handleSendAttachment = (type: "image" | "file") => {
     setShowAttachmentMenu(false);
-    if (type === 'image') {
+    if (type === "image") {
       fileInputRef.current?.click();
     } else {
-      onSendMessage('Shared document checklist.pdf', undefined, undefined);
+      onSendMessage("Shared document checklist.pdf", undefined, undefined);
     }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-const file = e.target.files?.[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     try {
       const res = await userService.uploadFile(file);
-      onSendMessage('Gửi một ảnh đính kèm', res.url, 'image');
+      onSendMessage("Gửi một ảnh đính kèm", res.url, "image");
     } catch (err) {
-      console.error('Failed to upload image', err);
+      console.error("Failed to upload image", err);
     }
   };
 
@@ -60,21 +64,33 @@ const file = e.target.files?.[0];
     <div className="p-4 border-t border-outline-variant/50 bg-surface-container-lowest shrink-0 z-10 relative">
       {replyingTo && (
         <div className="mb-2 flex items-center justify-between rounded-xl border-l-4 border-primary bg-surface-container-low px-3 py-2 text-xs text-on-surface">
-          <div className="min-w-0"><strong>Trả lời {replyingTo.senderName}</strong><p className="truncate opacity-70">{replyingTo.text || 'Tệp đính kèm'}</p></div>
-          <button type="button" onClick={onCancelReply} className="px-2 text-base" aria-label="Hủy trả lời">×</button>
+          <div className="min-w-0">
+            <strong>Trả lời {replyingTo.senderName}</strong>
+            <p className="truncate opacity-70">
+              {replyingTo.text || "Tệp đính kèm"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="px-2 text-base"
+            aria-label="Hủy trả lời"
+          >
+            ×
+          </button>
         </div>
       )}
       {showAttachmentMenu && (
         <div className="absolute bottom-full left-4 mb-2 bg-surface-container-lowest border border-outline-variant rounded-2xl p-2.5 shadow-xl w-44 z-20 flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
           <button
-            onClick={() => handleSendAttachment('image')}
+            onClick={() => handleSendAttachment("image")}
             className="w-full text-left p-2 hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 cursor-pointer"
           >
             <ImageIcon size={15} className="text-primary" />
             <span>Upload Design Image</span>
           </button>
           <button
-            onClick={() => handleSendAttachment('file')}
+            onClick={() => handleSendAttachment("file")}
             className="w-full text-left p-2 hover:bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface flex items-center gap-2.5 cursor-pointer"
           >
             <Paperclip size={15} className="text-secondary" />

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Search } from 'lucide-react';
-import { Conversation } from '../../../types/types';
+import React, { useState } from "react";
+import { Search } from "lucide-react";
+import { Conversation } from "../../../types/types";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -15,7 +15,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   isTyping,
   onSelect,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = conversations.filter(
     (c) =>
@@ -55,8 +55,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 onClick={() => onSelect(conv.id)}
                 className={`w-full flex items-center justify-between p-3 rounded-xl transition-all text-left cursor-pointer group ${
                   isSelected
-                    ? 'bg-primary-container text-on-primary-container shadow-xs'
-                    : 'hover:bg-surface-container-high/70 text-on-surface-variant hover:text-on-surface'
+                    ? "bg-primary-container text-on-primary-container shadow-xs"
+                    : "hover:bg-surface-container-high/70 text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -78,12 +78,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       <div
                         className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 rounded-full ${
                           isSelected
-                            ? 'border-primary-container'
-                            : 'border-surface-container-low'
+                            ? "border-primary-container"
+                            : "border-surface-container-low"
                         } ${
-                          conv.participantStatus === 'online'
-                            ? 'bg-secondary'
-                            : 'bg-outline'
+                          conv.participantStatus === "online"
+                            ? "bg-secondary"
+                            : "bg-outline"
                         }`}
                       />
                     )}
@@ -94,8 +94,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       <span
                         className={`text-sm font-semibold truncate ${
                           isSelected
-                            ? 'text-on-primary-container font-extrabold'
-                            : 'text-on-surface'
+                            ? "text-on-primary-container font-extrabold"
+                            : "text-on-surface"
                         }`}
                       >
                         {conv.participantName}
@@ -108,14 +108,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                     <div className="flex items-center justify-between mt-1">
                       <p
                         className={`text-xs truncate ${
-                          hasUnread ? 'text-on-surface font-semibold' : 'opacity-80'
+                          hasUnread
+                            ? "text-on-surface font-semibold"
+                            : "opacity-80"
                         } ${
                           isTyping[conv.id]
-                            ? 'text-secondary font-medium animate-pulse'
-                            : ''
+                            ? "text-secondary font-medium animate-pulse"
+                            : ""
                         }`}
                       >
-                        {isTyping[conv.id] ? 'Đang nhập...' : conv.lastMessageText}
+                        {isTyping[conv.id]
+                          ? "Đang nhập..."
+                          : conv.lastMessageText}
                       </p>
 
                       {hasUnread && (

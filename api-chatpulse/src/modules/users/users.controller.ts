@@ -21,6 +21,7 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 import { UpdateStatusDto } from "./dto/update-status.dto";
 import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
 import { AuthUser } from "../../shared/interfaces/auth-user.interface";
+import type { Express } from "express";
 
 @Controller("users")
 @UseGuards(JwtAuthGuard)

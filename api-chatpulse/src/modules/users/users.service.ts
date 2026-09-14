@@ -12,6 +12,7 @@ import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
 import { AuthUser } from "../../shared/interfaces/auth-user.interface";
+import type { Express } from "express";
 
 @Injectable()
 export class UsersService {
@@ -74,7 +75,8 @@ export class UsersService {
     keyword: string,
     excludeUserId?: string,
   ): Promise<UserDocument[]> {
-    const regex = new RegExp(keyword, "i");
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escapedKeyword, "i");
     const query: QueryFilter<UserDocument> = {
       $or: [{ name: { $regex: regex } }, { email: { $regex: regex } }],
     };
@@ -83,7 +85,7 @@ export class UsersService {
       query._id = { $ne: excludeUserId };
     }
 
-    return this.userModel.find(query).select("-password").exec();
+    return this.userModel.find(query).select("-password").limit(20).exec();
   }
 
   async updateProfile(

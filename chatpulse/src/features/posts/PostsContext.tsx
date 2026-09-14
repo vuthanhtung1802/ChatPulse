@@ -1,7 +1,7 @@
-import React, { createContext, useContext } from 'react';
-import { Post } from '../../types/types';
-import { usePostsState } from './usePosts';
-import { useAuth } from '../auth/AuthContext';
+import React, { createContext, useContext } from "react";
+import { Post } from "../../types/types";
+import { usePostsState } from "./usePosts";
+import { useAuth } from "../auth/AuthContext";
 
 interface PostsContextValue {
   posts: Post[];
@@ -11,7 +11,11 @@ interface PostsContextValue {
   toggleLikePost: (postId: string) => Promise<void>;
   toggleSavePost: (postId: string) => Promise<void>;
   hidePost: (postId: string) => Promise<void>;
-  createPost: (content: string, images?: string[], mood?: string) => Promise<void>;
+  createPost: (
+    content: string,
+    images?: string[],
+    mood?: string,
+  ) => Promise<void>;
   fetchSavedPosts: () => Promise<void>;
 }
 
@@ -23,13 +27,15 @@ export const PostsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { currentUser } = useAuth();
   const value = usePostsState(currentUser);
 
-  return <PostsContext.Provider value={value}>{children}</PostsContext.Provider>;
+  return (
+    <PostsContext.Provider value={value}>{children}</PostsContext.Provider>
+  );
 };
 
 export const usePosts = () => {
   const context = useContext(PostsContext);
   if (context === undefined) {
-    throw new Error('usePosts must be used within a PostsProvider');
+    throw new Error("usePosts must be used within a PostsProvider");
   }
   return context;
 };

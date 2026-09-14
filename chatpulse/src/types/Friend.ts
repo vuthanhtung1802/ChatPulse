@@ -1,4 +1,4 @@
-export type RelationshipStatus = 'none' | 'sent' | 'received' | 'friends';
+export type RelationshipStatus = "none" | "sent" | "received" | "friends";
 
 export interface FriendRequestSender {
   _id: string;
@@ -12,7 +12,7 @@ export interface FriendRequest {
   _id: string;
   requester: FriendRequestSender | string;
   addressee: FriendRequestSender | string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
   createdAt: string;
   updatedAt: string;
 }

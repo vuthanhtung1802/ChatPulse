@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Post, User } from '../../types/types';
-import { postService } from './services/posts.service';
+import { useState, useEffect } from "react";
+import { Post, User } from "../../types/types";
+import { postService } from "./services/posts.service";
 
 export function usePostsState(currentUser: User | null) {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -16,7 +16,7 @@ export function usePostsState(currentUser: User | null) {
         const data = await postService.getPosts();
         setPosts(data.posts || []);
       } catch (err) {
-        console.error('Error fetching posts', err);
+        console.error("Error fetching posts", err);
       } finally {
         setPostsLoading(false);
       }
@@ -29,18 +29,14 @@ export function usePostsState(currentUser: User | null) {
       const data = await postService.toggleLikePost(postId);
       if (data.post) {
         setPosts((prev) =>
-          prev.map((p) =>
-            p._id === postId ? { ...p, ...data.post } : p
-          )
+          prev.map((p) => (p._id === postId ? { ...p, ...data.post } : p)),
         );
         setSavedPosts((prev) =>
-          prev.map((p) =>
-            p._id === postId ? { ...p, ...data.post } : p
-          )
+          prev.map((p) => (p._id === postId ? { ...p, ...data.post } : p)),
         );
       }
     } catch (err) {
-      console.error('Error toggling like', err);
+      console.error("Error toggling like", err);
     }
   };
 
@@ -49,13 +45,11 @@ export function usePostsState(currentUser: User | null) {
       const data = await postService.toggleSavePost(postId);
       if (data.post) {
         setPosts((prev) =>
-          prev.map((p) =>
-            p._id === postId ? { ...p, ...data.post } : p
-          )
+          prev.map((p) => (p._id === postId ? { ...p, ...data.post } : p)),
         );
         setSavedPosts((prev) => {
           const updated = prev.map((p) =>
-            p._id === postId ? { ...p, ...data.post } : p
+            p._id === postId ? { ...p, ...data.post } : p,
           );
           if (data.post.savedByMe) {
             const exists = prev.some((p) => p._id === postId);
@@ -68,7 +62,7 @@ export function usePostsState(currentUser: User | null) {
         });
       }
     } catch (err) {
-      console.error('Error toggling save', err);
+      console.error("Error toggling save", err);
     }
   };
 
@@ -78,7 +72,7 @@ export function usePostsState(currentUser: User | null) {
       setPosts((prev) => prev.filter((p) => p._id !== postId));
       setSavedPosts((prev) => prev.filter((p) => p._id !== postId));
     } catch (err) {
-      console.error('Error hiding post', err);
+      console.error("Error hiding post", err);
     }
   };
 
@@ -88,13 +82,17 @@ export function usePostsState(currentUser: User | null) {
       const data = await postService.getSavedPosts();
       setSavedPosts(data.posts || []);
     } catch (err) {
-      console.error('Error fetching saved posts', err);
+      console.error("Error fetching saved posts", err);
     } finally {
       setSavedPostsLoading(false);
     }
   };
 
-  const createPost = async (content: string, images?: string[], mood?: string) => {
+  const createPost = async (
+    content: string,
+    images?: string[],
+    mood?: string,
+  ) => {
     if (!currentUser) return;
     try {
       const data = await postService.createPost(content, images, mood);
@@ -102,13 +100,21 @@ export function usePostsState(currentUser: User | null) {
         setPosts((prev) => [data.post, ...prev]);
       }
     } catch (err) {
-      console.error('Error creating post', err);
+      console.error("Error creating post", err);
     }
   };
 
   return {
-    posts, setPosts, postsLoading,
-    savedPosts, setSavedPosts, savedPostsLoading,
-    toggleLikePost, toggleSavePost, hidePost, createPost, fetchSavedPosts
+    posts,
+    setPosts,
+    postsLoading,
+    savedPosts,
+    setSavedPosts,
+    savedPostsLoading,
+    toggleLikePost,
+    toggleSavePost,
+    hidePost,
+    createPost,
+    fetchSavedPosts,
   };
 }

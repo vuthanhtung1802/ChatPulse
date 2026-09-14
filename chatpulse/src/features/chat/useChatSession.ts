@@ -33,6 +33,7 @@ export function useChatSession({
 
   useEffect(() => {
     if (!currentUser) return;
+    const currentUserId = currentUser.id;
     let cancelled = false;
 
     async function loadConversations() {
@@ -40,7 +41,7 @@ export function useChatSession({
         const response = await chatService.getConversations();
         if (cancelled) return;
         const conversations = (response as ApiConversation[]).map(
-          (conversation) => transformConversation(conversation, currentUser.id),
+          (conversation) => transformConversation(conversation, currentUserId),
         );
         setConversations((current) =>
           current.length > 0 ? current : conversations,

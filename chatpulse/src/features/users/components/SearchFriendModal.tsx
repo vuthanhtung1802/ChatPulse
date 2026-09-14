@@ -13,10 +13,7 @@ import {
 import { useChat } from "../../chat/ChatContext";
 import { useAuth } from "../../auth/AuthContext";
 import { useFriends } from "../../friends/FriendsContext";
-import { friendService } from "../../friends/services/friend.service";
-import { userService } from "../services/user.service";
-import { RelationshipInfo } from "../../../types/Friend";
-import { ApiUser } from "../../../types/Api";
+import { useUserSearch } from "../useUserSearch";
 
 interface SearchFriendModalProps {
   isOpen: boolean;
@@ -47,66 +44,23 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
   );
   const [groupName, setGroupName] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<ApiUser[]>([]);
-  const [statusMap, setStatusMap] = useState<Record<string, RelationshipInfo>>(
-    {},
-  );
-  const [isLoading, setIsLoading] = useState(false);
+  const { searchTerm, setSearchTerm, users, isLoading, getRelationship } =
+    useUserSearch({
+      enabled: isOpen,
+      currentUserId: currentUser?.id,
+      relationships,
+    });
 
   React.useEffect(() => {
     if (!isOpen) {
-      setUsers([]);
-      setStatusMap({});
-      setSearchTerm("");
       setActiveTab("search");
       setGroupName("");
       setSelectedFriends([]);
       return;
     }
-    if (!searchTerm.trim()) {
-      setUsers([]);
-      setStatusMap({});
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const data = await userService.searchUsers(searchTerm);
-        const filtered = ((data.users || data) as ApiUser[]).filter(
-          (user) => user._id !== currentUser?.id,
-        );
-        setUsers(filtered);
-
-        const unknownIds = filtered
-          .map((user) => user._id || user.id || "")
-          .filter((id: string) => !relationships[id]);
-        if (unknownIds.length > 0) {
-          const res = await friendService.getStatuses(unknownIds);
-          const map: Record<string, RelationshipInfo> = {};
-          for (const info of res.statuses || []) {
-            map[info.userId] = info;
-          }
-          setStatusMap(map);
-        }
-      } catch (err) {
-        console.error("Failed to search users", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const delayDebounce = setTimeout(fetchUsers, 300);
-
-    return () => clearTimeout(delayDebounce);
-  }, [searchTerm, isOpen, currentUser, relationships]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const getRelationship = (userId: string): RelationshipInfo | undefined =>
-    relationships[userId] ?? statusMap[userId];
 
   const handleSelectUser = async (id: string) => {
     try {
@@ -416,6 +370,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
                 ) : users.length > 0 ? (
                   users.map((user) => {
                     const userId = user._id || user.id;
+                    if (!userId) return null;
                     const avatarUrl = user.avatar || FALLBACK_AVATAR;
                     const relationship = getRelationship(userId);
                     const status = relationship?.status ?? "none";

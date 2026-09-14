@@ -1,40 +1,47 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import { UserPlus, Mail, Lock, User, ArrowRight, ShieldAlert } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import {
+  UserPlus,
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  ShieldAlert,
+} from "lucide-react";
 
 export const Register: React.FC = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
-  
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Please fill in all required fields.');
+      setError("Please fill in all required fields.");
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
-    setError('');
+    setError("");
     setIsLoading(true);
     try {
       const success = await signup(name, email, password);
       if (success) {
-        navigate('/');
+        navigate("/");
       } else {
-        setError('Registration failed. Please try again.');
+        setError("Registration failed. Please try again.");
       }
     } catch (err) {
-      setError('An error occurred during account creation.');
+      setError("An error occurred during account creation.");
     } finally {
       setIsLoading(false);
     }
@@ -42,13 +49,11 @@ export const Register: React.FC = () => {
 
   return (
     <div className="w-full h-full min-h-screen bg-[radial-gradient(ellipse_at_top_right,var(--color-primary-container),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top_right,#1b253b,transparent_65%)] flex items-center justify-center p-4 relative overflow-hidden select-none">
-      
       {/* Decorative ambient blurred blobs */}
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-primary/10 dark:bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse duration-5000"></div>
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 dark:bg-secondary/5 rounded-full blur-3xl -z-10 animate-pulse duration-3000"></div>
 
       <div className="w-full max-w-md bg-surface-container-lowest/80 dark:bg-surface-container-low/75 backdrop-blur-md border border-outline-variant/60 rounded-3xl overflow-hidden shadow-2xl flex flex-col p-8 relative animate-in fade-in zoom-in-95 duration-300">
-        
         {/* Brand Banner */}
         <div className="flex flex-col items-center text-center space-y-2 mb-6">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white font-bold text-2xl shadow-md shadow-primary/20">
@@ -139,7 +144,10 @@ export const Register: React.FC = () => {
             ) : (
               <>
                 <span>Create Free Account</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </>
             )}
           </button>
@@ -155,12 +163,11 @@ export const Register: React.FC = () => {
 
         {/* Switch Card */}
         <div className="text-center text-xs text-on-surface-variant font-medium">
-          Already a ChatPulse member?{' '}
+          Already a ChatPulse member?{" "}
           <Link to="/login" className="text-primary font-bold hover:underline">
             Sign In Instead
           </Link>
         </div>
-
       </div>
     </div>
   );

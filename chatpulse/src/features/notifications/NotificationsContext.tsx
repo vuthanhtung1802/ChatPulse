@@ -1,6 +1,6 @@
-import React, { createContext, useContext } from 'react';
-import { NotificationItem } from '../../types/Notification';
-import { useNotificationsState } from './useNotifications';
+import React, { createContext, useContext } from "react";
+import { NotificationItem } from "../../types/Notification";
+import { useNotificationsState } from "./useNotifications";
 
 interface NotificationsContextValue {
   notifications: NotificationItem[];
@@ -8,9 +8,9 @@ interface NotificationsContextValue {
   removeNotification: (id: string) => void;
 }
 
-const NotificationsContext = createContext<NotificationsContextValue | undefined>(
-  undefined,
-);
+const NotificationsContext = createContext<
+  NotificationsContextValue | undefined
+>(undefined);
 
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -27,7 +27,9 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useNotifications = () => {
   const context = useContext(NotificationsContext);
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationsProvider');
+    throw new Error(
+      "useNotifications must be used within a NotificationsProvider",
+    );
   }
   return context;
 };

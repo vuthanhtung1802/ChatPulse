@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Post } from '../../../types/types';
-import { usePosts } from '../PostsContext';
-import { useAuth } from '../../auth/AuthContext';
-import { getInitialsAvatar } from '../../../utils/avatarUtils';
-import { formatTime } from '../../../utils/formatTime';
-import { CommentSection } from '../../comments/components/CommentSection';
-import { Toast } from '../../../components/ui/Toast';
-import { postCardVariants } from './PostSkeleton';
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Post } from "../../../types/types";
+import { usePosts } from "../PostsContext";
+import { useAuth } from "../../auth/AuthContext";
+import { getInitialsAvatar } from "../../../utils/avatarUtils";
+import { formatTime } from "../../../utils/formatTime";
+import { CommentSection } from "../../comments/components/CommentSection";
+import { Toast } from "../../../components/ui/Toast";
+import { postCardVariants } from "./PostSkeleton";
 import {
   Heart,
   MessageCircle,
@@ -17,7 +17,7 @@ import {
   MoreHorizontal,
   Trash2,
   EyeOff,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface PostCardProps {
   post: Post;
@@ -38,8 +38,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         setOpenMenu(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -51,15 +51,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   }, [toast]);
 
   const isOwnerOrAdmin =
-    !!currentUser && (post.author._id === currentUser.id || currentUser.role === 'admin');
+    !!currentUser &&
+    (post.author._id === currentUser.id || currentUser.role === "admin");
 
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${post._id}`;
     try {
       await navigator.clipboard.writeText(url);
-      setToast('Đã copy link bài viết');
+      setToast("Đã copy link bài viết");
     } catch {
-      setToast('Không thể copy link');
+      setToast("Không thể copy link");
     }
   };
 
@@ -95,11 +96,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 <h4 className="font-display font-bold text-sm text-on-surface">
                   {post.author.name}
                 </h4>
-                {currentUser && post.author._id === currentUser.id && currentUser.role === 'admin' && (
-                  <span className="text-[9px] font-bold text-primary bg-primary-container/40 px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
-                    Pro
-                  </span>
-                )}
+                {currentUser &&
+                  post.author._id === currentUser.id &&
+                  currentUser.role === "admin" && (
+                    <span className="text-[9px] font-bold text-primary bg-primary-container/40 px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
+                      Pro
+                    </span>
+                  )}
               </div>
               {post.mood && (
                 <motion.p
@@ -121,11 +124,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               onClick={() => toggleSavePost(post._id)}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 post.savedByMe
-                  ? 'text-primary bg-primary-container/20'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                  ? "text-primary bg-primary-container/20"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
               }`}
             >
-              {post.savedByMe ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+              {post.savedByMe ? (
+                <BookmarkCheck size={15} />
+              ) : (
+                <Bookmark size={15} />
+              )}
             </button>
             <button
               onClick={() => setOpenMenu((prev) => !prev)}
@@ -142,8 +149,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   onClick={handleHide}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
                     isOwnerOrAdmin
-                      ? 'text-error font-medium hover:bg-error-container/30'
-                      : 'text-on-surface font-medium hover:bg-surface-container-high'
+                      ? "text-error font-medium hover:bg-error-container/30"
+                      : "text-on-surface font-medium hover:bg-surface-container-high"
                   }`}
                 >
                   {isOwnerOrAdmin ? (
@@ -173,14 +180,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <motion.div
               layout
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               className={`grid gap-3.5 overflow-hidden rounded-2xl border border-outline-variant/50 ${
                 post.images.length === 1
-                  ? 'grid-cols-1'
+                  ? "grid-cols-1"
                   : post.images.length === 2
-                  ? 'grid-cols-2'
-                  : 'grid-cols-1 md:grid-cols-5'
-              } ${post.images.length >= 3 ? 'h-[340px] md:h-[400px]' : ''}`}
+                    ? "grid-cols-2"
+                    : "grid-cols-1 md:grid-cols-5"
+              } ${post.images.length >= 3 ? "h-[340px] md:h-[400px]" : ""}`}
             >
               {post.images.length === 1 ? (
                 <div className="relative group overflow-hidden cursor-pointer rounded-2xl">
@@ -193,7 +200,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 </div>
               ) : post.images.length === 2 ? (
                 post.images.map((img, idx) => (
-                  <div key={idx} className="relative group overflow-hidden cursor-pointer rounded-2xl">
+                  <div
+                    key={idx}
+                    className="relative group overflow-hidden cursor-pointer rounded-2xl"
+                  >
                     <img
                       src={img}
                       alt=""
@@ -214,7 +224,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   </div>
                   <div className="md:col-span-2 grid grid-rows-2 gap-3.5 h-full">
                     {post.images.slice(1, 3).map((img, idx) => (
-                      <div key={idx} className="h-full relative group overflow-hidden cursor-pointer">
+                      <div
+                        key={idx}
+                        className="h-full relative group overflow-hidden cursor-pointer"
+                      >
                         <img
                           src={img}
                           alt=""
@@ -237,7 +250,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               whileTap={{ scale: 0.8 }}
               onClick={() => toggleLikePost(post._id)}
               className={`flex items-center gap-1.5 transition-colors cursor-pointer hover:text-error ${
-                post.likedByMe ? 'text-error font-extrabold' : ''
+                post.likedByMe ? "text-error font-extrabold" : ""
               }`}
             >
               <motion.div
@@ -247,7 +260,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 <Heart
                   size={16}
                   className={`transition-colors duration-200 ${
-                    post.likedByMe ? 'fill-current text-error' : ''
+                    post.likedByMe ? "fill-current text-error" : ""
                   }`}
                 />
               </motion.div>
@@ -257,7 +270,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <button
               onClick={() => setExpandedComments((prev) => !prev)}
               className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
-                expandedComments ? 'text-primary' : 'hover:text-primary'
+                expandedComments ? "text-primary" : "hover:text-primary"
               }`}
             >
               <MessageCircle size={16} />

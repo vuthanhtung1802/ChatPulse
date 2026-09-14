@@ -7,6 +7,7 @@ import {
   FriendRequestSchema,
 } from "./schemas/friend-request.schema";
 import { UsersModule } from "../users/users.module";
+import { FriendsRealtimeService } from "./friends-realtime.service";
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { UsersModule } from "../users/users.module";
     UsersModule,
   ],
   controllers: [FriendsController],
-  providers: [FriendsService],
-  exports: [FriendsService],
+  providers: [FriendsService, FriendsRealtimeService],
+  exports: [FriendsService, FriendsRealtimeService],
 })
 export class FriendsModule {}

@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React from "react";
+import { motion } from "motion/react";
 
 export const containerVariants = {
   hidden: { opacity: 0 },
@@ -15,7 +15,7 @@ export const postCardVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 },
   },
   exit: {
     opacity: 0,
@@ -29,7 +29,7 @@ export const PostSkeleton: React.FC = () => (
   <motion.div
     className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden"
     animate={{ opacity: [0.5, 1, 0.5] }}
-    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
   >
     <div className="p-5 flex items-center gap-3 border-b border-outline-variant/40">
       <div className="w-10 h-10 rounded-xl bg-surface-container-high" />

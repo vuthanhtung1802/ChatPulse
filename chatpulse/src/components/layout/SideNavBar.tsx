@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../features/auth/AuthContext';
-import { useTheme } from '../../features/theme/ThemeContext';
-import { useNotifications } from '../../features/notifications/NotificationsContext';
-import { useChat } from '../../features/chat/ChatContext';
-import { 
-  Home, 
-  MessageSquare, 
-  Bell, 
-  User as UserIcon, 
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../features/auth/AuthContext";
+import { useTheme } from "../../features/theme/ThemeContext";
+import { useNotifications } from "../../features/notifications/NotificationsContext";
+import { useChat } from "../../features/chat/ChatContext";
+import {
+  Home,
+  MessageSquare,
+  Bell,
+  User as UserIcon,
   Bookmark,
-  Plus, 
-  LogOut, 
-  Sun, 
+  Plus,
+  LogOut,
+  Sun,
   Moon,
   Compass,
-  Laptop
-} from 'lucide-react';
+  Laptop,
+} from "lucide-react";
 
 interface SideNavBarProps {
   onNewChatClick?: () => void;
@@ -30,20 +30,32 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
-  const unreadNotificationsCount = notifications.filter(n => n.unread).length;
-  const unreadMessagesCount = conversations.filter(c => c.lastMessageUnread).length;
+  const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
+  const unreadMessagesCount = conversations.filter(
+    (c) => c.lastMessageUnread,
+  ).length;
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const navItems = [
-    { to: '/', label: 'Feed', icon: Home, badge: 0 },
-    { to: '/saved', label: 'Saved', icon: Bookmark, badge: 0 },
-    { to: '/messages', label: 'Messages', icon: MessageSquare, badge: unreadMessagesCount },
-    { to: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount },
-    { to: '/profile', label: 'Profile', icon: UserIcon, badge: 0 },
+    { to: "/", label: "Feed", icon: Home, badge: 0 },
+    { to: "/saved", label: "Saved", icon: Bookmark, badge: 0 },
+    {
+      to: "/messages",
+      label: "Messages",
+      icon: MessageSquare,
+      badge: unreadMessagesCount,
+    },
+    {
+      to: "/notifications",
+      label: "Notifications",
+      icon: Bell,
+      badge: unreadNotificationsCount,
+    },
+    { to: "/profile", label: "Profile", icon: UserIcon, badge: 0 },
   ];
 
   return (
@@ -72,11 +84,14 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
 
       {/* Primary Action Button */}
       <div className="p-4">
-        <button 
+        <button
           onClick={onNewChatClick}
           className="w-full py-3 px-4 bg-primary text-on-primary font-medium rounded-xl flex items-center justify-center gap-2 hover:bg-primary-container hover:text-on-primary-container transition-all duration-200 shadow-sm shadow-primary/25 cursor-pointer group"
         >
-          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-200" />
+          <Plus
+            size={18}
+            className="group-hover:rotate-90 transition-transform duration-200"
+          />
           <span className="text-sm font-sans">Add Friend</span>
         </button>
       </div>
@@ -92,16 +107,17 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
             to={item.to}
             className={({ isActive }) => `
               flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-200 group cursor-pointer
-              ${isActive 
-                ? 'bg-primary-container text-on-primary-container font-semibold shadow-xs' 
-                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+              ${
+                isActive
+                  ? "bg-primary-container text-on-primary-container font-semibold shadow-xs"
+                  : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
               }
             `}
           >
             <div className="flex items-center gap-3">
-              <item.icon 
-                size={20} 
-                className={`transition-transform duration-200 group-hover:scale-105`} 
+              <item.icon
+                size={20}
+                className={`transition-transform duration-200 group-hover:scale-105`}
               />
               <span className="text-sm font-sans">{item.label}</span>
             </div>
@@ -116,24 +132,29 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
 
       {/* Bottom controls & profile section */}
       <div className="p-4 border-t border-outline-variant/50 space-y-4 bg-surface-container-low/80">
-        
         {/* Theme Toggle Module */}
         <div className="flex items-center justify-between p-2 rounded-xl bg-surface-container-high/60">
-          <span className="text-xs font-medium text-on-surface-variant px-1">Appearance</span>
+          <span className="text-xs font-medium text-on-surface-variant px-1">
+            Appearance
+          </span>
           <button
             onClick={toggleTheme}
             className="p-1.5 rounded-lg bg-surface-container-lowest text-on-surface border border-outline-variant/40 hover:bg-surface-container-highest transition-colors cursor-pointer"
             aria-label="Toggle Theme"
           >
-            {theme === 'dark' ? (
+            {theme === "dark" ? (
               <div className="flex items-center gap-1.5 text-amber-400">
                 <Sun size={14} />
-                <span className="text-[10px] font-medium text-on-surface">Light</span>
+                <span className="text-[10px] font-medium text-on-surface">
+                  Light
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-indigo-600">
                 <Moon size={14} />
-                <span className="text-[10px] font-medium text-on-surface">Dark</span>
+                <span className="text-[10px] font-medium text-on-surface">
+                  Dark
+                </span>
               </div>
             )}
           </button>
@@ -184,7 +205,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({ onNewChatClick }) => {
                   </span>
                 </div>
               </div>
-              
+
               <button
                 onClick={() => setShowLogoutConfirm(!showLogoutConfirm)}
                 className="p-1.5 text-on-surface-variant hover:text-error hover:bg-error-container/30 rounded-lg transition-colors cursor-pointer"

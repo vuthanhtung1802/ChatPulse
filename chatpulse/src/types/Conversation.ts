@@ -3,7 +3,7 @@ export interface Conversation {
   participantId?: string;
   participantName: string;
   participantAvatar: string;
-  participantStatus: 'online' | 'offline' | 'typing';
+  participantStatus: "online" | "offline" | "typing";
   lastMessageText: string;
   lastMessageTime: string;
   lastMessageUnread: boolean;

@@ -10,6 +10,7 @@ import { CreatePostDto } from "./dto/create-post.dto";
 import { CommentsService } from "./comments.service";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
 import { PostView } from "./posts.types";
+import type { Express } from "express";
 
 @Injectable()
 export class PostsService {
@@ -115,10 +116,7 @@ export class PostsService {
         .exec();
     }
 
-    return this.postModel
-      .findById(postId)
-      .populate("author", "name avatar email")
-      .exec();
+    return this.findById(postId);
   }
 
   async toggleSave(postId: string, userId: string): Promise<PostDocument> {
@@ -140,10 +138,7 @@ export class PostsService {
         .exec();
     }
 
-    return this.postModel
-      .findById(postId)
-      .populate("author", "name avatar email")
-      .exec();
+    return this.findById(postId);
   }
 
   async findSavedPosts(

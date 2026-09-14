@@ -1,4 +1,4 @@
-import { Message } from '../../../types/types';
+import { Message } from "../../../types/types";
 
 export interface PendingMessage {
   conversationId: string;
@@ -14,8 +14,8 @@ export interface OptimisticInput {
   senderAvatar: string;
   text: string;
   attachmentUrl?: string;
-  attachmentType?: 'image' | 'video';
-  replyTo?: Message['replyTo'];
+  attachmentType?: "image" | "video";
+  replyTo?: Message["replyTo"];
 }
 
 export function createOptimisticMessage(input: OptimisticInput): Message {
@@ -27,10 +27,10 @@ export function createOptimisticMessage(input: OptimisticInput): Message {
     senderName: input.senderName,
     senderAvatar: input.senderAvatar,
     timestamp: new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
+      hour: "2-digit",
+      minute: "2-digit",
     }),
-    status: 'sending',
+    status: "sending",
     attachmentUrl: input.attachmentUrl,
     attachmentType: input.attachmentType,
     replyTo: input.replyTo,
@@ -51,7 +51,7 @@ export function matchPendingMessage(
     if (
       p.conversationId === conversationId &&
       p.text === text &&
-      (p.attachmentUrl || '') === (attachmentUrl || '')
+      (p.attachmentUrl || "") === (attachmentUrl || "")
     ) {
       return id;
     }
@@ -72,5 +72,5 @@ export function mergeMessage(
 }
 
 export function previewText(text: string, attachmentUrl?: string): string {
-  return text || (attachmentUrl ? 'Gửi một file đính kèm' : '');
+  return text || (attachmentUrl ? "Gửi một file đính kèm" : "");
 }

@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Comment, User } from '../../types/types';
-import { commentService } from './services/comment.service';
+import { useState } from "react";
+import { Comment, User } from "../../types/types";
+import { commentService } from "./services/comment.service";
 
 export function useCommentsState(currentUser: User | null) {
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
-  const [commentsTotal, setCommentsTotal] = useState<Record<string, number>>({});
+  const [commentsTotal, setCommentsTotal] = useState<Record<string, number>>(
+    {},
+  );
 
   const fetchComments = async (postId: string, page = 1) => {
     try {
@@ -19,7 +21,7 @@ export function useCommentsState(currentUser: User | null) {
       }
       setCommentsTotal((prev) => ({ ...prev, [postId]: data.total || 0 }));
     } catch (err) {
-      console.error('Error fetching comments', err);
+      console.error("Error fetching comments", err);
     }
   };
 
@@ -32,7 +34,7 @@ export function useCommentsState(currentUser: User | null) {
         [postId]: (prev[postId] || 0) + 1,
       }));
     } catch (err) {
-      console.error('Error creating comment', err);
+      console.error("Error creating comment", err);
     }
   };
 
@@ -48,13 +50,17 @@ export function useCommentsState(currentUser: User | null) {
         [postId]: Math.max(0, (prev[postId] || 0) - 1),
       }));
     } catch (err) {
-      console.error('Error deleting comment', err);
+      console.error("Error deleting comment", err);
     }
   };
 
   return {
-    comments, setComments,
-    commentsTotal, setCommentsTotal,
-    fetchComments, createComment, deleteComment
+    comments,
+    setComments,
+    commentsTotal,
+    setCommentsTotal,
+    fetchComments,
+    createComment,
+    deleteComment,
   };
 }

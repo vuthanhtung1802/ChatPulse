@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useChat } from '../ChatContext';
-import { useAuth } from '../../auth/AuthContext';
-import { ConversationList } from '../components/ConversationList';
-import { ChatHeader } from '../components/ChatHeader';
-import { ChatInput } from '../components/ChatInput';
-import { MessageBubble } from '../components/MessageBubble';
-import { CallOverlay } from '../components/CallOverlay';
+import React, { useState, useRef, useEffect } from "react";
+import { useChat } from "../ChatContext";
+import { useAuth } from "../../auth/AuthContext";
+import { ConversationList } from "../components/ConversationList";
+import { ChatHeader } from "../components/ChatHeader";
+import { ChatInput } from "../components/ChatInput";
+import { MessageBubble } from "../components/MessageBubble";
+import { CallOverlay } from "../components/CallOverlay";
 
 export const Messages: React.FC = () => {
   const {
@@ -25,19 +25,25 @@ export const Messages: React.FC = () => {
   } = useChat();
   const { currentUser } = useAuth();
 
-  const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
+  const [activeCallType, setActiveCallType] = useState<
+    "voice" | "video" | null
+  >(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [replyingTo, setReplyingTo] = useState<import('../../../types/types').Message | null>(null);
+  const [replyingTo, setReplyingTo] = useState<
+    import("../../../types/types").Message | null
+  >(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const activeConv = conversations.find(c => c.id === activeConversationId) || conversations[0];
+  const activeConv =
+    conversations.find((c) => c.id === activeConversationId) ||
+    conversations[0];
   const activeMessages = messages[activeConversationId] || [];
 
   // Auto scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeMessages]);
 
   // Handle mock call duration
@@ -45,7 +51,7 @@ export const Messages: React.FC = () => {
     if (activeCallType) {
       setCallDuration(0);
       callTimerRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
+        setCallDuration((prev) => prev + 1);
       }, 1000);
     } else {
       if (callTimerRef.current) clearInterval(callTimerRef.current);
@@ -57,7 +63,6 @@ export const Messages: React.FC = () => {
 
   return (
     <div className="flex-1 flex h-full bg-background overflow-hidden relative">
-
       <ConversationList
         conversations={conversations}
         activeConversationId={activeConversationId}
@@ -67,11 +72,10 @@ export const Messages: React.FC = () => {
 
       {/* RIGHT PANEL: Chat Workspace */}
       <section className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
-
         {activeConv ? (
           <ChatHeader
             conversation={activeConv}
-            isGroup={activeConv.isGroup}
+            isGroup={Boolean(activeConv.isGroup)}
             onStartCall={setActiveCallType}
           />
         ) : null}
@@ -86,7 +90,7 @@ export const Messages: React.FC = () => {
                 disabled={loadingOlderMessages}
                 className="rounded-full border border-outline-variant px-4 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50"
               >
-                {loadingOlderMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
+                {loadingOlderMessages ? "Đang tải..." : "Tải tin nhắn cũ hơn"}
               </button>
             </div>
           )}
@@ -121,7 +125,6 @@ export const Messages: React.FC = () => {
             onCancelReply={() => setReplyingTo(null)}
           />
         )}
-
       </section>
 
       {/* MOCK CALL OVERLAY MODAL */}
@@ -133,7 +136,6 @@ export const Messages: React.FC = () => {
           onEnd={() => setActiveCallType(null)}
         />
       )}
-
     </div>
   );
 };

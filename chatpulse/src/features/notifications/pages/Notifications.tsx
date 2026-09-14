@@ -1,20 +1,20 @@
-import React from 'react';
-import { useNotifications } from '../NotificationsContext';
-import { useFriends } from '../../friends/FriendsContext';
-import { 
-  Bell, 
-  MessageSquare, 
-  Heart, 
-  AtSign, 
-  Settings, 
-  Check, 
+import React from "react";
+import { useNotifications } from "../NotificationsContext";
+import { useFriends } from "../../friends/FriendsContext";
+import {
+  Bell,
+  MessageSquare,
+  Heart,
+  AtSign,
+  Settings,
+  Check,
   Trash2,
   AlertCircle,
   UserPlus,
   UserCheck,
-  UserX
-} from 'lucide-react';
-import { NotificationItem } from '../../../types/Notification';
+  UserX,
+} from "lucide-react";
+import { NotificationItem } from "../../../types/Notification";
 
 export const Notifications: React.FC = () => {
   const { notifications, markNotificationsAsRead, removeNotification } =
@@ -25,17 +25,17 @@ export const Notifications: React.FC = () => {
     markNotificationsAsRead();
   };
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'message':
+      case "message":
         return <MessageSquare size={16} className="text-primary" />;
-      case 'like':
+      case "like":
         return <Heart size={16} className="text-error" fill="currentColor" />;
-      case 'mention':
+      case "mention":
         return <AtSign size={16} className="text-secondary" />;
-      case 'friend':
+      case "friend":
         return <UserPlus size={16} className="text-primary" />;
       default:
         return <AlertCircle size={16} className="text-amber-500" />;
@@ -56,11 +56,12 @@ export const Notifications: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
-      
       {/* Header */}
       <header className="h-16 border-b border-outline-variant/60 bg-surface-container-lowest flex items-center justify-between px-6 shrink-0 z-10">
         <div className="flex items-center gap-3">
-          <h2 className="font-display font-bold text-lg text-on-surface">Notifications</h2>
+          <h2 className="font-display font-bold text-lg text-on-surface">
+            Notifications
+          </h2>
           {unreadCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-error-container text-on-error-container border border-error-container/40">
               {unreadCount} Unread
@@ -85,10 +86,10 @@ export const Notifications: React.FC = () => {
           {notifications.length > 0 ? (
             <div className="divide-y divide-outline-variant/40">
               {notifications.map((notif) => (
-                <div 
+                <div
                   key={notif.id}
                   className={`p-4 flex items-start gap-4 transition-colors hover:bg-surface-container-low/30 relative ${
-                    notif.unread ? 'bg-primary-container/10' : ''
+                    notif.unread ? "bg-primary-container/10" : ""
                   }`}
                 >
                   {/* Left Icon Badge */}
@@ -99,9 +100,11 @@ export const Notifications: React.FC = () => {
                   {/* Middle Context */}
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between">
-                      <h4 className={`text-sm text-on-surface ${
-                        notif.unread ? 'font-bold' : 'font-semibold'
-                      }`}>
+                      <h4
+                        className={`text-sm text-on-surface ${
+                          notif.unread ? "font-bold" : "font-semibold"
+                        }`}
+                      >
                         {notif.title}
                       </h4>
                       <span className="text-[10px] text-on-surface-variant opacity-80 shrink-0 ml-2">
@@ -113,7 +116,7 @@ export const Notifications: React.FC = () => {
                     </p>
 
                     {/* Friend request actions */}
-                    {notif.type === 'friend' && notif.requestId && (
+                    {notif.type === "friend" && notif.requestId && (
                       <div className="flex items-center gap-2 pt-2">
                         <button
                           onClick={() => handleAccept(notif)}
@@ -137,7 +140,6 @@ export const Notifications: React.FC = () => {
                   {notif.unread && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                   )}
-
                 </div>
               ))}
             </div>
@@ -146,13 +148,16 @@ export const Notifications: React.FC = () => {
               <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center mx-auto text-on-surface-variant">
                 <Bell size={20} />
               </div>
-              <h3 className="font-display font-semibold text-sm text-on-surface">No notifications yet</h3>
-              <p className="text-xs text-on-surface-variant opacity-80">We will notify you when coworkers update layouts or start syncs.</p>
+              <h3 className="font-display font-semibold text-sm text-on-surface">
+                No notifications yet
+              </h3>
+              <p className="text-xs text-on-surface-variant opacity-80">
+                We will notify you when coworkers update layouts or start syncs.
+              </p>
             </div>
           )}
         </div>
       </div>
-
     </div>
   );
 };

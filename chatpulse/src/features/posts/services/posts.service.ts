@@ -8,7 +8,7 @@ export const postService = {
   },
 
   async createPost(content: string, images?: string[], mood?: string) {
-    const response = await apiClient.post('/posts', { content, images, mood });
+    const response = await apiClient.post("/posts", { content, images, mood });
     return response.data;
   },
 
@@ -23,7 +23,9 @@ export const postService = {
   },
 
   async getSavedPosts(page = 1, limit = 10) {
-    const response = await apiClient.get(`/posts/saved?page=${page}&limit=${limit}`);
+    const response = await apiClient.get(
+      `/posts/saved?page=${page}&limit=${limit}`,
+    );
     return response.data;
   },
 
@@ -33,16 +35,18 @@ export const postService = {
   },
 
   async getPostsByUser(userId: string, page = 1, limit = 10) {
-    const response = await apiClient.get(`/posts/user/${userId}?page=${page}&limit=${limit}`);
+    const response = await apiClient.get(
+      `/posts/user/${userId}?page=${page}&limit=${limit}`,
+    );
     return response.data;
   },
 
   async uploadPostImage(file: File) {
     const formData = new FormData();
-    formData.append('file', file);
-    const response = await apiClient.post('/posts/upload', formData, {
+    formData.append("file", file);
+    const response = await apiClient.post("/posts/upload", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return response.data;

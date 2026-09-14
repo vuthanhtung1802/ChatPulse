@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useEffect } from 'react';
-import { User } from '../../types/types';
-import { authService } from './services/auth.service';
-import { userService } from '../users/services/user.service';
-import { tokenStorage } from '../../lib/api/client';
-import { transformUser } from '../../utils/transformers';
-import { useAuthState } from './useAuth';
+import React, { createContext, useCallback, useContext, useEffect } from "react";
+import { User } from "../../types/types";
+import { authService } from "./services/auth.service";
+import { userService } from "../users/services/user.service";
+import { tokenStorage } from "../../lib/api/client";
+import { transformUser } from "../../utils/transformers";
+import { useAuthState } from "./useAuth";
 
 interface AuthContextValue {
   currentUser: User | null;
@@ -24,29 +24,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Restore session from stored tokens on first load.
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
-    if (token && !currentUser) {
+    if (token) {
       authService
         .getCurrentUser()
         .then((userRes) => setCurrentUser(transformUser(userRes)))
-        .catch((err) => console.error('Session restore failed', err));
+        .catch((err) => console.error("Session restore failed", err));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setCurrentUser]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     authService.logout();
     setCurrentUser(null);
-  };
+  }, [setCurrentUser]);
 
   // Force logout when the refresh token becomes invalid.
   useEffect(() => {
     const handleUnauthorized = () => logout();
-    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    window.addEventListener("auth-unauthorized", handleUnauthorized);
     return () => {
-      window.removeEventListener('auth-unauthorized', handleUnauthorized);
+      window.removeEventListener("auth-unauthorized", handleUnauthorized);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [logout]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -55,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setCurrentUser(transformUser(userRes));
       return true;
     } catch (err) {
-      console.error('Login failed', err);
+      console.error("Login failed", err);
       return false;
     }
   };
@@ -65,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await authService.register(name, email, password);
       return await login(email, password);
     } catch (err) {
-      console.error('Signup failed', err);
+      console.error("Signup failed", err);
       return false;
     }
   };
@@ -75,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await userService.updateProfile(updatedData);
       setCurrentUser(transformUser(response.user));
     } catch (err) {
-      console.error('Error updating profile', err);
+      console.error("Error updating profile", err);
       throw err;
     }
   };
@@ -92,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
