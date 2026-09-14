@@ -110,4 +110,18 @@ export class ChatController {
     );
     return { success: true, message };
   }
+
+  @Post("messages/:messageId/reactions")
+  async toggleReaction(
+    @Param("messageId") messageId: string,
+    @CurrentUser() user: AuthUser,
+    @Body("emoji") emoji: string,
+  ) {
+    const message = await this.chatService.toggleReaction(
+      messageId,
+      user._id.toString(),
+      emoji,
+    );
+    return { reactions: message.reactions };
+  }
 }

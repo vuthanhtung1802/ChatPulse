@@ -21,6 +21,9 @@ export class Message {
   })
   sender: Types.ObjectId;
 
+  @Prop({ default: "" })
+  clientMessageId: string;
+
   @Prop({
     default: "",
   })
@@ -35,6 +38,12 @@ export class Message {
     default: "",
   })
   attachmentType: string;
+
+  @Prop({ type: Types.ObjectId, ref: "Message", default: null })
+  replyTo?: Types.ObjectId;
+
+  @Prop({ type: [{ user: { type: Types.ObjectId, ref: "User" }, emoji: String }], default: [] })
+  reactions: Array<{ user: Types.ObjectId; emoji: string }>;
 
   @Prop({
     default: "sent",
@@ -54,3 +63,7 @@ export class Message {
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+MessageSchema.index(
+  { sender: 1, clientMessageId: 1 },
+  { unique: true, partialFilterExpression: { clientMessageId: { $gt: "" } } },
+);

@@ -1,5 +1,6 @@
 import {
   ConnectedSocket,
+  Ack,
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -25,6 +26,8 @@ interface SendMessagePayload {
   content?: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  clientMessageId?: string;
+  replyTo?: string;
 }
 
 interface TypingPayload {
@@ -137,6 +140,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SendMessagePayload,
+    @Ack() acknowledge?: (response: { ok: true }) => void,
   ): Promise<void> {
     const userId = client.data.userId as string;
 
@@ -146,19 +150,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.content ?? "",
       payload.attachmentUrl ?? "",
       payload.attachmentType ?? "",
+      payload.clientMessageId ?? "",
+      payload.replyTo ?? "",
     );
 
     this.server
       .to(conversationRoom(payload.conversationId))
       .emit("messageReceived", message);
+    acknowledge?.({ ok: true });
   }
 
   @SubscribeMessage("typing")
   handleTyping(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TypingPayload,
-  ): void {
+  ): Promise<void> {
     const userId = client.data.userId as string;
+    return this.broadcastTyping(client, userId, payload);
+  }
+
+  private async broadcastTyping(
+    client: Socket,
+    userId: string,
+    payload: TypingPayload,
+  ): Promise<void> {
+    if (!(await this.chatService.hasParticipant(payload.conversationId, userId))) {
+      throw new WsException("You are not a participant of this conversation");
+    }
     client.to(conversationRoom(payload.conversationId)).emit("typing", {
       conversationId: payload.conversationId,
       userId,
@@ -205,6 +223,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit("messageRecalled", {
         conversationId: message.conversationId.toString(),
         messageId: message._id.toString(),
+      });
+  }
+
+  @SubscribeMessage("toggleReaction")
+  async handleToggleReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { messageId: string; emoji: string },
+  ): Promise<void> {
+    const message = await this.chatService.toggleReaction(
+      payload.messageId,
+      client.data.userId as string,
+      payload.emoji,
+    );
+    this.server
+      .to(conversationRoom(message.conversationId.toString()))
+      .emit("messageReactionUpdated", {
+        conversationId: message.conversationId.toString(),
+        messageId: message._id.toString(),
+        reactions: message.reactions,
       });
   }
 

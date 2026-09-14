@@ -30,6 +30,9 @@ export class Conversation {
     default: "",
   })
   groupName: string;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: "User" }], default: [] })
+  hiddenBy: Types.ObjectId[];
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
