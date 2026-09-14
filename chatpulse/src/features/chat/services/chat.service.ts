@@ -39,4 +39,9 @@ export const chatService = {
     const response = await apiClient.delete(`/conversations/messages/${messageId}`);
     return response.data;
   },
+
+  async toggleReaction(messageId: string, emoji: string) {
+    const response = await apiClient.post(`/conversations/messages/${messageId}/reactions`, { emoji });
+    return response.data.reactions;
+  },
 };

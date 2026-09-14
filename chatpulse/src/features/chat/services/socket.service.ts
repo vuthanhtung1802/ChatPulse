@@ -37,21 +37,24 @@ export interface MessageRecalledPayload {
   messageId: string;
 }
 
-export type SocketEvent =
-  | 'messageReceived'
-  | 'messageSeen'
-  | 'messageRecalled'
-  | 'typing'
-  | 'userStatusChanged'
-  | 'connect'
-  | 'disconnect';
-
 export interface SendMessagePayload {
   conversationId: string;
   content?: string;
   attachmentUrl?: string;
   attachmentType?: 'image' | 'video';
+  clientMessageId: string;
+  replyTo?: string;
 }
+
+export type SocketEvent =
+  | 'messageReceived'
+  | 'messageSeen'
+  | 'messageRecalled'
+  | 'messageReactionUpdated'
+  | 'typing'
+  | 'userStatusChanged'
+  | 'connect'
+  | 'disconnect';
 
 type EventHandler = (...args: any[]) => void;
 
@@ -109,8 +112,17 @@ class SocketService {
     this.socket?.emit('leaveConversation', { conversationId });
   }
 
-  sendMessage(payload: SendMessagePayload): void {
-    this.socket?.emit('sendMessage', payload);
+  sendMessage(payload: SendMessagePayload): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        reject(new Error('Socket is disconnected'));
+        return;
+      }
+      this.socket.timeout(8000).emit('sendMessage', payload, (error: Error | null) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
   }
 
   emitTyping(conversationId: string, isTyping: boolean): void {
@@ -124,6 +136,11 @@ class SocketService {
   emitRecall(messageId: string): void {
     this.socket?.emit('recallMessage', { messageId });
   }
+
+  toggleReaction(messageId: string, emoji: string): void {
+    this.socket?.emit('toggleReaction', { messageId, emoji });
+  }
+
 }
 
 export const socketService = new SocketService();

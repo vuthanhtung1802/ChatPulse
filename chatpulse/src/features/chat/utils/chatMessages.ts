@@ -15,11 +15,13 @@ export interface OptimisticInput {
   text: string;
   attachmentUrl?: string;
   attachmentType?: 'image' | 'video';
+  replyTo?: Message['replyTo'];
 }
 
 export function createOptimisticMessage(input: OptimisticInput): Message {
   return {
     id: input.id,
+    conversationId: input.conversationId,
     text: input.text,
     senderId: input.senderId,
     senderName: input.senderName,
@@ -28,9 +30,10 @@ export function createOptimisticMessage(input: OptimisticInput): Message {
       hour: '2-digit',
       minute: '2-digit',
     }),
-    status: 'sent',
+    status: 'sending',
     attachmentUrl: input.attachmentUrl,
     attachmentType: input.attachmentType,
+    replyTo: input.replyTo,
   };
 }
 

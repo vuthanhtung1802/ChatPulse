@@ -64,6 +64,19 @@ export const transformMessage = (msg: any): Message => {
   const senderId = msg.sender?._id || msg.sender;
   return {
     id: msg._id,
+    conversationId: msg.conversationId?.toString?.() || msg.conversationId,
+    replyTo: msg.replyTo
+      ? {
+          id: msg.replyTo._id,
+          text: msg.replyTo.isRecalled ? 'Tin nhắn đã bị thu hồi' : msg.replyTo.content,
+          senderName: msg.replyTo.sender?.name || '',
+          isRecalled: msg.replyTo.isRecalled,
+        }
+      : undefined,
+    reactions: (msg.reactions || []).map((reaction: any) => ({
+      user: reaction.user?._id || reaction.user,
+      emoji: reaction.emoji,
+    })),
     text: msg.isRecalled ? 'Tin nhắn đã bị thu hồi' : (msg.content || ''),
     senderId: senderId,
     senderName: msg.sender?.name || '',

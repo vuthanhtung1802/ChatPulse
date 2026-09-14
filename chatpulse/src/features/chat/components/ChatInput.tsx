@@ -1,17 +1,22 @@
 import React from 'react';
 import { Image as ImageIcon, Paperclip, Send } from 'lucide-react';
 import { userService } from '../../users/services/user.service';
+import { Message } from '../../../types/types';
 
 interface ChatInputProps {
   placeholder: string;
   onSendMessage: (text: string, attachmentUrl?: string, attachmentType?: 'image' | 'video') => void;
   onTyping?: (isTyping: boolean) => void;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   placeholder,
   onSendMessage,
   onTyping,
+  replyingTo,
+  onCancelReply,
 }) => {
   const [inputText, setInputText] = React.useState('');
   const [showAttachmentMenu, setShowAttachmentMenu] = React.useState(false);
@@ -53,6 +58,12 @@ const file = e.target.files?.[0];
 
   return (
     <div className="p-4 border-t border-outline-variant/50 bg-surface-container-lowest shrink-0 z-10 relative">
+      {replyingTo && (
+        <div className="mb-2 flex items-center justify-between rounded-xl border-l-4 border-primary bg-surface-container-low px-3 py-2 text-xs text-on-surface">
+          <div className="min-w-0"><strong>Trả lời {replyingTo.senderName}</strong><p className="truncate opacity-70">{replyingTo.text || 'Tệp đính kèm'}</p></div>
+          <button type="button" onClick={onCancelReply} className="px-2 text-base" aria-label="Hủy trả lời">×</button>
+        </div>
+      )}
       {showAttachmentMenu && (
         <div className="absolute bottom-full left-4 mb-2 bg-surface-container-lowest border border-outline-variant rounded-2xl p-2.5 shadow-xl w-44 z-20 flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
           <button

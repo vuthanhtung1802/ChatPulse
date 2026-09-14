@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCheck, Trash } from 'lucide-react';
+import { CheckCheck, LoaderCircle, RefreshCw, Reply, SmilePlus, Trash } from 'lucide-react';
 import { Message } from '../../../types/types';
 
 interface MessageBubbleProps {
@@ -7,6 +7,9 @@ interface MessageBubbleProps {
   isSelf: boolean;
   isGroup: boolean;
   onRecall: (messageId: string) => void;
+  onRetry: (messageId: string) => void;
+  onReply: (message: Message) => void;
+  onReact: (messageId: string, emoji: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -14,6 +17,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isSelf,
   isGroup,
   onRecall,
+  onRetry,
+  onReply,
+  onReact,
 }) => (
   <div
     className={`flex gap-3 max-w-[80%] ${
@@ -44,6 +50,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
           }`}
         >
+          {msg.replyTo && (
+            <div className={`mb-2 rounded-lg border-l-2 px-2 py-1 text-[11px] ${isSelf ? 'bg-white/10 border-white/60' : 'bg-surface-container-high border-primary'}`}>
+              <strong>{msg.replyTo.senderName}</strong>
+              <p className="truncate opacity-75">{msg.replyTo.text || 'Tệp đính kèm'}</p>
+            </div>
+          )}
           {msg.text && <p className="font-sans font-medium">{msg.text}</p>}
 
           {msg.attachmentUrl && msg.attachmentType === 'image' && (
@@ -65,15 +77,44 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           >
             <span>{msg.timestamp}</span>
             {isSelf && (
-              <CheckCheck
-                size={11}
-                className={
-                  msg.status === 'read' ? 'text-secondary' : 'text-on-primary/60'
-                }
-              />
+              msg.status === 'sending' ? (
+                <LoaderCircle size={11} className="animate-spin" />
+              ) : msg.status === 'failed' ? (
+                <button type="button" onClick={() => onRetry(msg.id)} className="flex items-center gap-1 text-error-container" title="Thử gửi lại">
+                  <RefreshCw size={11} /> Gửi lại
+                </button>
+              ) : (
+                <CheckCheck
+                  size={11}
+                  className={msg.status === 'read' ? 'text-secondary' : 'text-on-primary/60'}
+                />
+              )
             )}
           </div>
         </div>
+
+        {!!msg.reactions?.length && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {Object.entries(msg.reactions.reduce<Record<string, number>>((counts, reaction) => {
+              counts[reaction.emoji] = (counts[reaction.emoji] || 0) + 1;
+              return counts;
+            }, {})).map(([emoji, count]) => (
+              <button key={emoji} type="button" onClick={() => onReact(msg.id, emoji)} className="rounded-full border border-outline-variant bg-surface-container-lowest px-2 py-0.5 text-[11px]">{emoji} {count}</button>
+            ))}
+          </div>
+        )}
+
+        {!msg.isRecalled && !msg.id.startsWith('temp-') && (
+          <div className="absolute -top-7 right-0 hidden group-hover/msg:flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest px-1 shadow-sm">
+            <button type="button" onClick={() => onReply(msg)} className="p-1" title="Trả lời"><Reply size={13} /></button>
+            <div className="group/reactions relative">
+              <button type="button" className="p-1" title="Thả cảm xúc"><SmilePlus size={13} /></button>
+              <div className="absolute bottom-full right-0 hidden group-hover/reactions:flex rounded-full border border-outline-variant bg-surface-container-lowest p-1 shadow-lg">
+                {['👍', '❤️', '😂', '😮', '😢', '🎉'].map((emoji) => <button key={emoji} type="button" onClick={() => onReact(msg.id, emoji)} className="p-1">{emoji}</button>)}
+              </div>
+            </div>
+          </div>
+        )}
 
         {isSelf && !msg.isRecalled && (
           <button

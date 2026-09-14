@@ -14,14 +14,20 @@ export const Messages: React.FC = () => {
     activeConversationId,
     setActiveConversationId,
     sendMessage,
+    retryMessage,
     recallMessage,
     isTyping,
     sendTypingStatus,
+    hasMoreMessages,
+    loadingOlderMessages,
+    loadOlderMessages,
+    toggleReaction,
   } = useChat();
   const { currentUser } = useAuth();
 
   const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [replyingTo, setReplyingTo] = useState<import('../../../types/types').Message | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,6 +78,18 @@ export const Messages: React.FC = () => {
 
         {/* Messages Screen Window */}
         <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4 bg-[radial-gradient(var(--color-surface-container),transparent_95%)]">
+          {hasMoreMessages[activeConversationId] && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={loadOlderMessages}
+                disabled={loadingOlderMessages}
+                className="rounded-full border border-outline-variant px-4 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50"
+              >
+                {loadingOlderMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
+              </button>
+            </div>
+          )}
           {activeMessages.map((msg) => {
             const isSelf = msg.senderId === currentUser?.id;
             return (
@@ -81,6 +99,9 @@ export const Messages: React.FC = () => {
                 isSelf={isSelf}
                 isGroup={activeConv?.isGroup || false}
                 onRecall={recallMessage}
+                onRetry={retryMessage}
+                onReply={setReplyingTo}
+                onReact={toggleReaction}
               />
             );
           })}
@@ -91,8 +112,13 @@ export const Messages: React.FC = () => {
         {activeConv && (
           <ChatInput
             placeholder={`Write your message to ${activeConv.participantName}...`}
-            onSendMessage={sendMessage}
+            onSendMessage={(text, url, type) => {
+              sendMessage(text, url, type, replyingTo || undefined);
+              setReplyingTo(null);
+            }}
             onTyping={sendTypingStatus}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
           />
         )}
 

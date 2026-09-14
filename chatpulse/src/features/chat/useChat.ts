@@ -17,6 +17,10 @@ export function useChatState(currentUser: User | null) {
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [activeConversationId, setActiveConversationId] = useState<string>('');
   const [isTyping, setIsTyping] = useState<Record<string, boolean>>({});
+  const [hasMoreMessages, setHasMoreMessages] = useState<Record<string, boolean>>({});
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const messagePagesRef = useRef<Record<string, number>>({});
+  const MESSAGE_PAGE_SIZE = 50;
 
   const currentUserIdRef = useRef<string | null>(null);
   currentUserIdRef.current = currentUser?.id ?? null;
@@ -33,11 +37,16 @@ export function useChatState(currentUser: User | null) {
 
   const loadMessages = async (conversationId: string) => {
     try {
-      const res = await chatService.getMessages(conversationId);
+      const res = await chatService.getMessages(conversationId, 1, MESSAGE_PAGE_SIZE);
       const transformed = res.map(transformMessage);
       setMessages((prev) => ({
         ...prev,
         [conversationId]: transformed,
+      }));
+      messagePagesRef.current[conversationId] = 1;
+      setHasMoreMessages((prev) => ({
+        ...prev,
+        [conversationId]: res.length === MESSAGE_PAGE_SIZE,
       }));
       setConversations((prev) =>
         prev.map((conv) =>
@@ -52,6 +61,34 @@ export function useChatState(currentUser: User | null) {
     }
   };
 
+  const loadOlderMessages = async () => {
+    const conversationId = activeConversationIdRef.current;
+    if (!conversationId || loadingOlderMessages || hasMoreMessages[conversationId] === false) return;
+    setLoadingOlderMessages(true);
+    try {
+      const nextPage = (messagePagesRef.current[conversationId] ?? 1) + 1;
+      const res = await chatService.getMessages(conversationId, nextPage, MESSAGE_PAGE_SIZE);
+      const older = res.map(transformMessage);
+      setMessages((prev) => {
+        const current = prev[conversationId] || [];
+        const currentIds = new Set(current.map((message) => message.id));
+        return {
+          ...prev,
+          [conversationId]: [...older.filter((message) => !currentIds.has(message.id)), ...current],
+        };
+      });
+      messagePagesRef.current[conversationId] = nextPage;
+      setHasMoreMessages((prev) => ({
+        ...prev,
+        [conversationId]: res.length === MESSAGE_PAGE_SIZE,
+      }));
+    } catch (err) {
+      console.error('Error fetching older messages', err);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  };
+
   useEffect(() => {
     if (!activeConversationId || !currentUser) return;
 
@@ -59,7 +96,7 @@ export function useChatState(currentUser: User | null) {
     socketService.joinConversation(activeConversationId);
 
     return () => {
-      socketService.leaveConversation(activeConversationId);
+      sendTypingStatus(false);
     };
   }, [activeConversationId, currentUser]);
 
@@ -198,6 +235,19 @@ export function useChatState(currentUser: User | null) {
     );
   };
 
+  const handleReactionUpdated = ({ conversationId, messageId, reactions }: {
+    conversationId: string;
+    messageId: string;
+    reactions: Array<{ user: string; emoji: string }>;
+  }) => {
+    setMessages((prev) => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || []).map((message) =>
+        message.id === messageId ? { ...message, reactions } : message,
+      ),
+    }));
+  };
+
   const handleTyping = ({
     conversationId,
     isTyping: typingNow,
@@ -241,6 +291,7 @@ export function useChatState(currentUser: User | null) {
     socketService.on('messageReceived', handleMessageReceived);
     socketService.on('messageSeen', handleMessageSeen);
     socketService.on('messageRecalled', handleMessageRecalled);
+    socketService.on('messageReactionUpdated', handleReactionUpdated);
     socketService.on('typing', handleTyping);
     socketService.on('userStatusChanged', handleUserStatusChanged);
 
@@ -248,6 +299,7 @@ export function useChatState(currentUser: User | null) {
       socketService.off('messageReceived', handleMessageReceived);
       socketService.off('messageSeen', handleMessageSeen);
       socketService.off('messageRecalled', handleMessageRecalled);
+      socketService.off('messageReactionUpdated', handleReactionUpdated);
       socketService.off('typing', handleTyping);
       socketService.off('userStatusChanged', handleUserStatusChanged);
     };
@@ -259,6 +311,7 @@ export function useChatState(currentUser: User | null) {
     text: string,
     attachmentUrl?: string,
     attachmentType?: 'image' | 'video',
+    replyTo?: Message,
   ) => {
     const conversationId = activeConversationIdRef.current;
     const senderId = currentUserIdRef.current;
@@ -274,6 +327,9 @@ export function useChatState(currentUser: User | null) {
       text,
       attachmentUrl,
       attachmentType,
+      replyTo: replyTo
+        ? { id: replyTo.id, text: replyTo.text, senderName: replyTo.senderName, isRecalled: replyTo.isRecalled }
+        : undefined,
     });
 
     pendingMessagesRef.current.set(tempId, {
@@ -299,8 +355,51 @@ export function useChatState(currentUser: User | null) {
       content: text,
       attachmentUrl,
       attachmentType,
+      clientMessageId: tempId,
+      replyTo: replyTo?.id,
     };
-    socketService.sendMessage(payload);
+    socketService.sendMessage(payload).catch(() => {
+      setMessages((prev) => ({
+        ...prev,
+        [conversationId]: (prev[conversationId] || []).map((message) =>
+          message.id === tempId ? { ...message, status: 'failed' as const } : message,
+        ),
+      }));
+    });
+  };
+
+  const toggleReaction = (messageId: string, emoji: string) => {
+    if (messageId.startsWith('temp-')) return;
+    socketService.toggleReaction(messageId, emoji);
+  };
+
+  const retryMessage = (messageId: string) => {
+    const conversationId = activeConversationIdRef.current;
+    const message = messages[conversationId]?.find((item) => item.id === messageId);
+    if (!message || message.status !== 'failed') return;
+    setMessages((prev) => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || []).map((item) =>
+        item.id === messageId ? { ...item, status: 'sending' as const } : item,
+      ),
+    }));
+    socketService
+      .sendMessage({
+        conversationId,
+        content: message.text,
+        attachmentUrl: message.attachmentUrl,
+        attachmentType: message.attachmentType,
+        clientMessageId: messageId,
+        replyTo: message.replyTo?.id,
+      })
+      .catch(() => {
+        setMessages((prev) => ({
+          ...prev,
+          [conversationId]: (prev[conversationId] || []).map((item) =>
+            item.id === messageId ? { ...item, status: 'failed' as const } : item,
+          ),
+        }));
+      });
   };
 
   const sendTypingStatus = (isTypingNow: boolean) => {
@@ -387,6 +486,8 @@ export function useChatState(currentUser: User | null) {
     setMessages({});
     setActiveConversationId('');
     setIsTyping({});
+    setHasMoreMessages({});
+    messagePagesRef.current = {};
   };
 
   return {
@@ -397,11 +498,16 @@ export function useChatState(currentUser: User | null) {
     activeConversationId,
     setActiveConversationId,
     isTyping,
+    hasMoreMessages,
+    loadingOlderMessages,
     sendMessage,
+    retryMessage,
+    toggleReaction,
     recallMessage,
     sendTypingStatus,
     createConversation,
     createGroupConversation,
+    loadOlderMessages,
     clearChat,
   };
 }
