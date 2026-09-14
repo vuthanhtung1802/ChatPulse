@@ -46,6 +46,10 @@ export interface SendMessagePayload {
   replyTo?: string;
 }
 
+export interface FriendRequestPayload {
+  requestId: string;
+}
+
 export type SocketEvent =
   | 'messageReceived'
   | 'messageSeen'
@@ -53,6 +57,10 @@ export type SocketEvent =
   | 'messageReactionUpdated'
   | 'typing'
   | 'userStatusChanged'
+  | 'friendRequestReceived'
+  | 'friendRequestAccepted'
+  | 'friendRequestDeclined'
+  | 'friendRemoved'
   | 'connect'
   | 'disconnect';
 
@@ -141,6 +149,21 @@ class SocketService {
     this.socket?.emit('toggleReaction', { messageId, emoji });
   }
 
+  sendFriendRequest(targetUserId: string): void {
+    this.socket?.emit('sendFriendRequest', { to: targetUserId });
+  }
+
+  acceptFriendRequest(requestId: string): void {
+    this.socket?.emit('acceptFriendRequest', { requestId });
+  }
+
+  declineFriendRequest(requestId: string): void {
+    this.socket?.emit('declineFriendRequest', { requestId });
+  }
+
+  emitRemoveFriend(friendId: string): void {
+    this.socket?.emit('removeFriend', { friendId });
+  }
 }
 
 export const socketService = new SocketService();

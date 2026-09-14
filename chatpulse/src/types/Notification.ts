@@ -3,6 +3,8 @@ export interface NotificationItem {
   title: string;
   description: string;
   time: string;
-  type: 'message' | 'system' | 'like' | 'mention';
+  type: 'message' | 'system' | 'like' | 'mention' | 'friend';
   unread: boolean;
+  requestId?: string;
+  senderId?: string;
 }

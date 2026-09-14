@@ -5,6 +5,7 @@ import { useNotificationsState } from './useNotifications';
 interface NotificationsContextValue {
   notifications: NotificationItem[];
   markNotificationsAsRead: () => void;
+  removeNotification: (id: string) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(

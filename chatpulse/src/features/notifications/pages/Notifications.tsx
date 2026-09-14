@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNotifications } from '../NotificationsContext';
+import { useFriends } from '../../friends/FriendsContext';
 import { 
   Bell, 
   MessageSquare, 
@@ -8,11 +9,17 @@ import {
   Settings, 
   Check, 
   Trash2,
-  AlertCircle
+  AlertCircle,
+  UserPlus,
+  UserCheck,
+  UserX
 } from 'lucide-react';
+import { NotificationItem } from '../../../types/Notification';
 
 export const Notifications: React.FC = () => {
-  const { notifications, markNotificationsAsRead } = useNotifications();
+  const { notifications, markNotificationsAsRead, removeNotification } =
+    useNotifications();
+  const { acceptRequest, declineRequest } = useFriends();
 
   const handleMarkAllRead = () => {
     markNotificationsAsRead();
@@ -28,9 +35,23 @@ export const Notifications: React.FC = () => {
         return <Heart size={16} className="text-error" fill="currentColor" />;
       case 'mention':
         return <AtSign size={16} className="text-secondary" />;
+      case 'friend':
+        return <UserPlus size={16} className="text-primary" />;
       default:
         return <AlertCircle size={16} className="text-amber-500" />;
     }
+  };
+
+  const handleAccept = (notif: NotificationItem) => {
+    if (!notif.requestId) return;
+    acceptRequest(notif.requestId);
+    removeNotification(notif.id);
+  };
+
+  const handleDecline = (notif: NotificationItem) => {
+    if (!notif.requestId) return;
+    declineRequest(notif.requestId);
+    removeNotification(notif.id);
   };
 
   return (
@@ -90,6 +111,26 @@ export const Notifications: React.FC = () => {
                     <p className="text-xs text-on-surface-variant leading-relaxed">
                       {notif.description}
                     </p>
+
+                    {/* Friend request actions */}
+                    {notif.type === 'friend' && notif.requestId && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          onClick={() => handleAccept(notif)}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold flex items-center gap-1.5 hover:bg-primary-container hover:text-on-primary-container transition-colors cursor-pointer"
+                        >
+                          <UserCheck size={13} />
+                          <span>Accept</span>
+                        </button>
+                        <button
+                          onClick={() => handleDecline(notif)}
+                          className="px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-semibold flex items-center gap-1.5 hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer"
+                        >
+                          <UserX size={13} />
+                          <span>Decline</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Unread dot */}
