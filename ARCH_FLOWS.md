@@ -1,181 +1,229 @@
-# TÀI LIỆU KIẾN TRÚC & LUỒNG HOẠT ĐỘNG CHAT PULSE (AUTHENTICATION & REALTIME FLOWS)
+# ChatPulse — Kiến trúc và luồng hoạt động
 
-Tài liệu này giải thích chi tiết luồng giao tiếp giữa React Frontend và NestJS Backend đối với Authentication (Xác thực) và Realtime Chat (Tin nhắn thời gian thực).
+Tài liệu này mô tả logic hiện tại của dự án:
 
-> **Ghi chú**: Mọi REST endpoint đều nằm dưới global prefix **`/api`** (ví dụ `POST /api/auth/login`).
+- `chatpulse`: React 19, TypeScript, Vite, React Router, Axios, Socket.IO Client.
+- `api-chatpulse`: NestJS 11, MongoDB/Mongoose, JWT, Socket.IO, Cloudinary.
 
----
+Backend dùng global prefix `/api`. REST phục vụ xác thực, đọc dữ liệu, phân trang và upload. Socket.IO phục vụ chat, presence và friends realtime.
 
-## 1. Luồng Xác thực (Authentication Flow)
+## 1. Kiến trúc tổng quan
 
-```
-+-------------------+                    +--------------------+                    +------------------+
-|   React Frontend  |                    |   NestJS Backend   |                    |  MongoDB Database|
-+-------------------+                    +--------------------+                    +------------------+
-          |                                        |                                         |
-          |----- (1) POST /api/auth/login -------->|    { email, password }                    |
-          |                                        |----- (2) bcrypt.compare + findByEmail --->|
-          |                                        |<---- (3) User hợp lệ ---------------------|
-          |                                        |                                         |
-          |<---- (4) Trả về accessToken & ----------|                                         |
-          |   refreshToken (JSON body)             |  + lưu bcrypt hash refreshToken vào          |
-          |                                        |    user.refreshTokens                        |
-[Lưu CẢ 2 token vào sessionStorage]                |                                         |
-[chatpulse_accessToken / _refreshToken]            |                                         |
-          |                                        |                                         |
-          |----- (5) Gửi Request có Auth Guard ---->|                                         |
-          |      (Headers: Bearer accessToken)     |                                         |
-          |                                        |----- (6) Xác thực JWT hợp lệ ---------->|
-          |<---- (8) Phản hồi dữ liệu 200 OK ------|                                            |
-          |                                        |                                         |
-      [accessToken]                                |                                         |
-        [hết hạn]                                  |                                         |
-          |                                        |                                         |
-          |----- (9) Gửi Request bất kỳ ----------->|                                         |
-          |<---- (10) Lỗi 401 Unauthorized --------|                                         |
-          |                                        |                                         |
-  [Axios Interceptor]                              |                                         |
-  [bắt 401, giữ request vào hàng chờ]              |                                         |
-          |                                        |                                         |
-          |--- (11) POST /api/auth/refresh ------->|                                         |
-          |    { refreshToken } (body JSON)        |                                         |
-          |                                        |-- (12) JwtRefreshGuard: verify JWT + ------->|
-          |                                        |    bcrypt.compare hash trong DB           |
-          |                                        |<-- (13) refreshToken hợp lệ ---------------|
-          |<---- (14) accessToken MỚI + -----------|                                         |
-          |   refreshToken mới (rotation)          |  + lưu hash refreshToken MỚI                |
-   [Cập nhật sessionStorage]                       |                                         |
-   [Giải phóng hàng chờ, gửi lại request]          |                                         |
-          |                                        |                                         |
-      [refreshToken cũng hết hạn]                  |                                         |
-          |----- (15) /api/auth/refresh lỗi 401 -->|                                         |
-   [Xóa sessionStorage]                            |                                         |
-   [dispatch 'auth-unauthorized']                  |                                         |
-          |                                        |                                         |
-   [AppContext bắt sự kiện -> logout]              |  - Ngắt socket, xóa state               |
-          |                                        |                                          |
-   [Đăng xuất (Logout)]                            |                                         |
-          |--- (16) POST /api/auth/logout --------->|                                         |
-          |     (Bearer accessToken)                 |-- xóa refreshTokens + set status ------->|
-          |                                        |    'offline'                              |
-          |<---- (17) 200 OK ----------------------|                                         |
-   [Xóa sessionStorage + state + ngắt socket]      |                                         |
+```text
+React Client
+├── AuthContext             Phiên đăng nhập
+├── ChatContext             Hội thoại, tin nhắn, socket events
+├── FriendsContext          Bạn bè và lời mời
+├── PostsContext            Feed, like, saved posts
+├── NotificationsContext    Thông báo trong phiên
+├── Axios ───────────────── REST /api ───────────────┐
+└── Socket.IO Client ────── Realtime events ─────────┤
+                                                     ▼
+NestJS API
+├── AuthModule, UsersModule, FriendsModule
+├── ChatModule, PostsModule
+├── MongooseModule ──────── MongoDB
+└── CloudinaryModule ────── Cloudinary
 ```
 
-### Chi tiết các bước:
+Các trang `/`, `/saved`, `/messages`, `/notifications`, `/profile` yêu cầu đăng nhập. `/login` và `/register` chỉ dành cho khách.
 
-1. **Đăng nhập**: React gửi `{ email, password }` tới `POST /api/auth/login`.
-2. **Backend xử lý**: NestJS băm/so sánh password bằng `bcrypt`. Nếu đúng, tạo:
-   - **Access Token** (hạn ngắn, `JWT_EXPIRES_IN`, mặc định `1h`), ký bằng `JWT_SECRET`.
-   - **Refresh Token** (hạn dài, `JWT_REFRESH_EXPIRES_IN`, mặc định `7d`), ký bằng `JWT_REFRESH_SECRET`. Hash của token này được lưu vào `user.refreshTokens` trong DB.
-3. **Response**: trả về `{ accessToken, refreshToken, user }`.
-4. **React lưu trữ**: **cả hai token lưu trong `sessionStorage`** (key `chatpulse_accessToken`, `chatpulse_refreshToken`). Không sử dụng httpOnly cookie.
-5. **Gửi token**: `Axios request interceptor` tự đính kèm `Authorization: Bearer <accessToken>` (xem `src/services/api.ts`).
-6. **Access Token hết hạn (xử lý 401)**:
-   - Backend trả `401`. `Axios response interceptor` giữ request lỗi vào hàng chờ (queue).
-   - Client gọi `POST /api/auth/refresh` với **body JSON `{ refreshToken }`**.
-   - `JwtRefreshGuard` (strategy `jwt-refresh`) verify chữ ký token, rồi `bcrypt.compare` với hash trong DB.
-   - Nếu hợp lệ, backend ký **cặp token mới** (rotation) và cập nhật hash mới vào DB.
-   - Interceptor cập nhật `sessionStorage`, giải phóng hàng chờ và tự gửi lại những request đang đợi.
-7. **Refresh Token hết hạn / bị thu hồi**:
-   - Nếu `/api/auth/refresh` trả `401`, client xóa `sessionStorage`, phát sự kiện `auth-unauthorized`.
-   - `AppContext` bắt sự kiện → thực hiện logout: xóa state, ngắt socket, đưa về trang Login.
-8. **Đăng xuất (Logout)**:
-   - Client gọi `POST /api/auth/logout` (có JWT guard). Backend xóa toàn bộ refresh tokens trong DB.
-   - *Fallback*: backend cũng set user `status: "offline"` phòng khi socket chưa kịp disconnect.
-   - Client xóa sạch `sessionStorage` và state.
+## 2. Authentication
 
----
+### Đăng nhập
 
-## 2. Luồng Chat Realtime (Realtime Chat Flow)
+1. `POST /api/auth/register` kiểm tra email, hash mật khẩu bằng bcrypt và tạo user.
+2. `POST /api/auth/login` kiểm tra mật khẩu, trả `accessToken`, `refreshToken`, `user`.
+3. Client lưu token trong `sessionStorage` với key `chatpulse_accessToken` và `chatpulse_refreshToken`.
+4. Axios interceptor tự thêm `Authorization: Bearer <accessToken>`.
 
-Kiến trúc realtime dùng **Socket.IO**: `ChatGateway` (NestJS `@nestjs/websockets`) chạy chung HTTP server với REST. Việc **ghi DB vẫn qua `ChatService`** (bảo toàn dữ liệu), Socket.IO chỉ thêm lớp phát tán tức thời. REST giữ vai trò đọc lịch sử, phân trang, xóa.
+### Refresh token
 
-```
-  User A (React)               NestJS Gateway / ChatService          User B (React)
-      |                                                                    |
-      |-- socket connect (auth: { token }) --> verify JWT -> userId         |
-      |                              |-- join user:${userId}                |
-      |                              |-- join MỌI conversation của user      |
-      |                              |-- status: online + broadcast          |
-      |                              |      'userStatusChanged'              |
-      |                                                                       |
-  ---- Gửi tin nhắn ----                                                      |
-      |-- emit 'sendMessage' { conversationId, content, ... } ->|             |
-      |                              |-- ChatService.createMessage -----------> (ghi DB + lastMessage)
-      |                              |-- emit 'messageReceived' tới            |
-      |                              |   room conversation:${conversationId}   |
-      |<-- echo 'messageReceived' ---|                             |<--------- 'messageReceived'
-      |   (thay thế message optimistic)                              |-- render tin mới       
-      |                                                                      |
----- User B mở conversation / nhận tin ----                                    |
-      |                              |                                        |-- emit 'seenMessage'
-      |                              |-- mark → status: "read" nếu có                             |
-      |                              |-- emit 'messageSeen' tới room          |
-      |<-- 'messageSeen' (CheckCheck xanh) |                                  |
-      |                                                                      |
----- Gõ chữ ----
-      |-- emit 'typing' { conversationId, isTyping } -> broadcast room        |
-      |                                                                       |-- 'typing' -> hiện "đang nhập"
-  ---- Đóng bảng / mất mạng ----                                              |
-      |                       handleDisconnect -> status: 'offline' + broadcast |
-      |                                                               |<-- 'userStatusChanged'
+```text
+Request → 401
+   ├── đang refresh → vào hàng chờ
+   └── chưa refresh → POST /api/auth/refresh
+          ├── thành công: lưu token mới, chạy lại request và hàng chờ
+          └── thất bại: xóa token, phát auth-unauthorized
 ```
 
-### Chi tiết các bước gửi nhận tin nhắn:
+Refresh token dùng secret riêng. Backend lưu bcrypt hash của token và xoay vòng cả hai token khi refresh. `POST /api/auth/logout` xóa refresh token đã lưu và đặt user `offline`.
 
-1. **Kết nối (Connection)**:
-   - Sau đăng nhập / khi trang load lại (còn token hợp lệ), React mở socket với `auth: { token }` (xem `src/services/socket.service.ts`).
-   - Gateway `handleConnection`: `jwtService.verifyAsync` lấy `userId`; join phòng `user:${userId}` VÀ tất cả phòng `conversation:${id}` của các conversation của user (để nhận tin nơi không mở màn hình Chat).
-   - Đếm số kết nối/user (`connectionCounts`) chống flicker đa tab: **kết nối đầu tiên** set `status: "online"` + broadcast `userStatusChanged { userId, status: 'online' }`.
-   - Đóng tab (hoặc logout): `handleDisconnect` giảm đếm; khi về `0` → `status: "offline"` + broadcast `userStatusChanged`.
-2. **Gửi tin nhắn (sendMessage)**:
-   - User A nhập nội dung → `handleSendMessage`. UI **append luôn 1 message "optimistic"** (tick x1) hiển thị ngay.
-   - Đồng thời socket emit `sendMessage` với `{ conversationId, content, attachmentUrl?, attachmentType? }`.
-   - Gateway gọi `ChatService.createMessage()` ghi vào MongoDB (fields: `conversationId`, `sender`, `content`, `attachmentUrl`, `attachmentType`, `status: "sent"`, `isRecalled`, `deletedBy`, timestamps), đồng thời cập nhật `conversation.lastMessage`.
-   - Gateway emit `messageReceived` tới room `conversation:${conversationId}` (gồm cả sender).
-   - Client User A nhận echo → **thay thế message optimistic** (match theo content) để có `_id` thật; User B nhận và append vào `messages[conversationId]`, cập nhật preview `lastMessage` của conversation.
-3. **Đánh dấu đã đọc (seen)**:
-   - Khi User B mở conversation hoặc nhận được tin mới khi đang mở, B emit `seenMessage { conversationId }`.
-   - Gateway `handleSeenMessage` → `ChatService.markMessagesRead` (đánh `status: "read"` cho các tin của đối phương chưa đọc) và nếu vẫn còn → emit `messageSeen { conversationId, seenBy }` tới cả phòng.
-   - User A nhận `messageSeen` → đổi `status: 'read'` trên tin của mình (CheckCheck chuyển màu xanh).
-4. **Thu hồi tin nhắn (recall)**:
-   - User A bấm thu hồi → frontend gọi REST `POST /api/conversations/messages/:id/recall` (backend kiểm tra quyền), đồng thời emit `recallMessage { messageId }` để báo realtime.
-   - Gateway `recallMessage` cũng đảm bảo, emit `messageRecalled { conversationId, messageId }` tới phòng; cả A và B đều đổi UI thành "Tin nhắn đã bị thu hồi".
-5. **Typing Indicator**:
-   - User A gõ chữ → `handleMessageChange` gọi emit `typing { conversationId, isTyping: true }` (debounce, chỉ gửi ở nhịp đầu tiên), gateway broadcast tới phòng (không gửi về người gửi).
-   - User B nhận một `isTyping: true` → hiện "Đang nhập..."; tự động tắt sau 2s (hoặc khi nhận `isTyping: false`).
-6. **Lịch sử tin nhắn & phân trang**:
-   - Đọc lại lịch sử qua REST: `GET /api/conversations/:id/messages?page=N&limit=M` (mặc định 50 tin; sắp xếp tăng dần).
-   - Xóa là **soft delete**: `DELETE /api/conversations/messages/:messageId` thêm userId vào mảng `deletedBy`; các message bị xóa không hiện cho user đó nữa.
+| Method | Endpoint | Chức năng |
+|---|---|---|
+| POST | `/api/auth/register` | Đăng ký |
+| POST | `/api/auth/login` | Đăng nhập |
+| POST | `/api/auth/refresh` | Xoay vòng token |
+| POST | `/api/auth/logout` | Đăng xuất |
+| GET | `/api/auth/me` | Lấy user hiện tại |
 
----
+## 3. Socket và presence
 
-## 3. Các sự kiện Realtime (Event Summary)
+Client kết nối với `auth: { token }`. Gateway xác thực JWT, lấy `userId` từ `sub`, rồi cho socket vào:
 
-### Client → Server (emit):
+- `user:<userId>` để nhận sự kiện cá nhân.
+- Mọi `conversation:<conversationId>` hiện có để nhận tin kể cả khi không mở cuộc chat đó.
 
-| Event            | Payload                                                                 |
-|------------------|-------------------------------------------------------------------------|
-| `joinConversation`  | `{ conversationId }` — vào phòng chat                                   |
-| `leaveConversation` | `{ conversationId }` — rời phòng chat (khi chuyển màn khác)             |
-| `sendMessage`       | `{ conversationId, content?, attachmentUrl?, attachmentType? }`         |
-| `typing`            | `{ conversationId, isTyping }`                                          |
-| `seenMessage`       | `{ conversationId }`                                                    |
-| `recallMessage`     | `{ messageId }`                                                         |
+Gateway đếm số socket theo user. Socket đầu tiên chuyển user sang `online`; socket cuối cùng ngắt mới chuyển sang `offline`, nên mở nhiều tab không làm presence nhấp nháy. Khi reconnect, backend xác thực và join lại các phòng.
 
-### Server → Client (emit)
+## 4. Gửi tin nhắn
 
-| Event            | Payload | Mô tả                                                   |
-|------------------|----------------------------------------------------------------------------------|
-| `messageReceived`  | message (populate sender) | Có ai trong phòng gửi tin mới        |
-| `messageSeen`      | `{ conversationId, seenBy }` | Sender biết tin của mình đã đọc     |
-| `messageRecalled`  | `{ conversationId, messageId }` | Tin trong phòng bị thu hồi        |
-| `typing`           | `{ conversationId, userId, isTyping }` | Đối phương đang gõ             |
-| `userStatusChanged` | `{ userId, status: 'online' \| 'offline' }` | Presence realtime   |
+```text
+Sender UI                 Gateway / MongoDB                 Receiver UI
+   ├─ tạo temp message           │                              │
+   ├─ status: sending            │                              │
+   └─ sendMessage ──────────────►├─ kiểm tra participant       │
+       clientMessageId           ├─ kiểm tra content/file       │
+       content/file/replyTo?     ├─ chống trùng                 │
+                                 ├─ lưu Message + lastMessage   │
+   ◄──── messageReceived ────────┼──── messageReceived ────────►│
+   └─ thay temp bằng bản thật    └─ acknowledgement             └─ render
+```
 
-### Presence (Online/Offline)
+Mỗi tin có `clientMessageId` do client tạo. MongoDB có unique index theo `sender + clientMessageId`. Nếu retry sau khi server đã lưu nhưng client chưa nhận phản hồi, backend trả bản ghi cũ thay vì tạo bản sao.
 
-- Trạng thái được đặt theo **socket connection**: kết nối đầu → online, kết nối cuối → offline (multi-tab an toàn).
-- Cũng được set **fallback khi logout** ở backend (`AuthService.logout`).
-- Client các user khác cập nhật `participantStatus` của conversation khi nhận `userStatusChanged` → chấm xanh / "Active Now" / "Offline" trên `Messages.tsx`.
+Client chờ acknowledgement tối đa 8 giây. Khi mất kết nối hoặc timeout, tin chuyển thành `failed` và có nút **Gửi lại**. Retry giữ nguyên ID và thông tin reply. Backend từ chối message không có cả nội dung lẫn attachment.
+
+## 5. Lịch sử, seen và typing
+
+`GET /api/conversations/:id/messages?page=1&limit=50` kiểm tra quyền thành viên, loại các tin nằm trong `deletedBy` của user, lấy trang mới nhất và trả theo thứ tự thời gian. Client có nút tải trang cũ hơn, prepend dữ liệu và lọc ID trùng.
+
+Khi mở hội thoại hoặc nhận tin trong hội thoại đang mở, client phát `seenMessage`. Backend đổi các tin của người khác sang `read` và broadcast `messageSeen`.
+
+Typing được debounce 1,5 giây ở client. Backend kiểm tra user thuộc conversation trước khi broadcast. Client tự tắt indicator sau 2 giây để tránh bị treo.
+
+## 6. Reply, reaction, recall và delete
+
+- **Reply:** hỗ trợ một cấp. Backend kiểm tra message gốc thuộc cùng conversation rồi populate nội dung và sender để hiển thị preview.
+- **Reaction:** bật/tắt một trong `👍 ❤️ 😂 😮 😢 🎉`; event `messageReactionUpdated` đồng bộ cả phòng.
+- **Recall:** chỉ sender được thu hồi. Backend đặt `isRecalled`, thay nội dung và xóa attachment; event `messageRecalled` cập nhật client.
+- **Delete message:** thêm user vào `deletedBy`; người khác vẫn thấy tin.
+
+## 7. Conversation 1–1 và nhóm
+
+Chat 1–1 được tái sử dụng nếu đã có conversation với đúng hai participant. Xóa conversation 1–1 chỉ thêm người gọi vào `hiddenBy`, không xóa dữ liệu của đối phương. Khi có tin mới, `hiddenBy` được xóa để conversation xuất hiện lại.
+
+UI tạo nhóm bằng tên nhóm và tối thiểu hai người bạn; backend tự thêm người tạo. Xóa group conversation khiến người gọi rời nhóm. Nếu không còn participant, backend xóa conversation cùng message.
+
+Hiện chưa có owner/admin nhóm, đổi ảnh/tên sau khi tạo hoặc quản lý thành viên sau khi tạo.
+
+## 8. Friends và notifications
+
+Friends dùng REST để đọc và Socket.IO để thay đổi realtime.
+
+| Client → Server | Payload |
+|---|---|
+| `sendFriendRequest` | `{ to }` |
+| `acceptFriendRequest` | `{ requestId }` |
+| `declineFriendRequest` | `{ requestId }` |
+| `removeFriend` | `{ friendId }` |
+
+| Server → Client | Ý nghĩa |
+|---|---|
+| `friendRequestReceived` | Có lời mời mới |
+| `friendRequestAccepted` | Lời mời được chấp nhận |
+| `friendRequestDeclined` | Lời mời bị từ chối |
+| `friendRemoved` | Bị hủy kết bạn |
+
+Nếu hai user gửi lời mời ngược chiều, service tự chuyển quan hệ thành accepted. Notifications hiện được tổng hợp ở frontend từ incoming requests và socket events; trạng thái đọc/xóa chưa lưu trong MongoDB.
+
+## 9. Socket events của chat
+
+| Chiều | Event | Payload |
+|---|---|---|
+| Client → Server | `joinConversation` | `{ conversationId }` |
+| Client → Server | `leaveConversation` | `{ conversationId }` |
+| Client → Server | `sendMessage` | `{ conversationId, content?, attachmentUrl?, attachmentType?, clientMessageId, replyTo? }` |
+| Client → Server | `typing` | `{ conversationId, isTyping }` |
+| Client → Server | `seenMessage` | `{ conversationId }` |
+| Client → Server | `recallMessage` | `{ messageId }` |
+| Client → Server | `toggleReaction` | `{ messageId, emoji }` |
+| Server → Client | `messageReceived` | Message đã populate sender và replyTo |
+| Server → Client | `messageSeen` | `{ conversationId, seenBy }` |
+| Server → Client | `messageRecalled` | `{ conversationId, messageId }` |
+| Server → Client | `messageReactionUpdated` | `{ conversationId, messageId, reactions }` |
+| Server → Client | `typing` | `{ conversationId, userId, isTyping }` |
+| Server → Client | `userStatusChanged` | `{ userId, status }` |
+
+## 10. REST API
+
+Trừ register, login và refresh, các endpoint sau yêu cầu access token.
+
+### Users và friends
+
+| Method | Endpoint | Chức năng |
+|---|---|---|
+| GET | `/api/users` | Danh sách user, loại user hiện tại |
+| GET | `/api/users/search?q=...` | Tìm user |
+| GET | `/api/users/:id` | Hồ sơ công khai |
+| PUT | `/api/users/profile` | Sửa hồ sơ của mình |
+| PUT | `/api/users/password` | Đổi mật khẩu |
+| PUT | `/api/users/:id/avatar` | Upload avatar |
+| GET/POST | `/api/users/:id/gallery` | Xem/upload gallery |
+| POST | `/api/users/upload` | Upload attachment |
+| GET | `/api/friends` | Danh sách bạn bè |
+| GET | `/api/friends/requests/incoming` | Lời mời nhận được |
+| GET | `/api/friends/requests/sent` | Lời mời đã gửi |
+| GET | `/api/friends/statuses?ids=...` | Trạng thái quan hệ theo user ID |
+
+### Conversations
+
+| Method | Endpoint | Chức năng |
+|---|---|---|
+| POST | `/api/conversations` | Tạo/lấy chat 1–1 hoặc tạo nhóm |
+| GET | `/api/conversations` | Danh sách hội thoại chưa ẩn |
+| GET | `/api/conversations/:id` | Chi tiết hội thoại |
+| GET | `/api/conversations/:id/messages` | Lịch sử có phân trang |
+| DELETE | `/api/conversations/:id` | Ẩn chat 1–1 hoặc rời nhóm |
+| DELETE | `/api/conversations/messages/:messageId` | Xóa tin phía mình |
+| POST | `/api/conversations/messages/:messageId/recall` | Thu hồi tin |
+| POST | `/api/conversations/messages/:messageId/reactions` | Bật/tắt reaction qua REST |
+
+### Posts và comments
+
+| Method | Endpoint | Chức năng |
+|---|---|---|
+| POST/GET | `/api/posts` | Tạo bài / lấy feed phân trang |
+| GET | `/api/posts/saved` | Bài đã lưu |
+| GET | `/api/posts/:id` | Chi tiết bài |
+| GET | `/api/posts/user/:userId` | Bài của user |
+| POST | `/api/posts/:id/like` | Bật/tắt like |
+| POST | `/api/posts/:id/save` | Bật/tắt save |
+| DELETE | `/api/posts/:id` | Xóa theo quyền owner/admin |
+| POST | `/api/posts/upload` | Upload media |
+| POST/GET | `/api/posts/:id/comments` | Tạo/lấy bình luận |
+| DELETE | `/api/posts/:postId/comments/:commentId` | Xóa bình luận theo quyền |
+
+## 11. Mô hình dữ liệu chính
+
+```text
+User: name, email, password, role, avatar, status, refreshTokens[], photoGallery[]
+
+FriendRequest: requester → User, addressee → User, status
+
+Conversation
+├── participants[] → User
+├── lastMessage → Message
+├── isGroup, groupName
+└── hiddenBy[] → User
+
+Message
+├── conversationId → Conversation, sender → User
+├── clientMessageId, content, attachmentUrl, attachmentType
+├── replyTo → Message, reactions[] { user, emoji }
+├── status, isRecalled
+└── deletedBy[] → User
+
+Post: author, content/media, likes[], savedBy[]
+Comment: post, author, content
+```
+
+## 12. Giới hạn hiện tại
+
+- Voice/video call chỉ là UI mô phỏng, chưa dùng WebRTC.
+- Read receipt là trạng thái chung trên message, chưa có mốc đọc từng thành viên nhóm.
+- Unread count và notifications chưa lưu bền vững.
+- Chưa có tìm kiếm message phía server và chặn user.
+- Group chưa có owner/admin và quản lý thành viên.
+- Refresh token nằm trong `sessionStorage`, chưa dùng httpOnly cookie.
+- CORS đang dùng `origin: true`; production nên giới hạn domain bằng cấu hình.
