@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, QueryFilter } from "mongoose";
 import * as bcrypt from "bcrypt";
 import { User, UserDocument } from "./schemas/user.schema";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
@@ -75,7 +75,7 @@ export class UsersService {
     excludeUserId?: string,
   ): Promise<UserDocument[]> {
     const regex = new RegExp(keyword, "i");
-    const query: any = {
+    const query: QueryFilter<UserDocument> = {
       $or: [{ name: { $regex: regex } }, { email: { $regex: regex } }],
     };
 
@@ -127,7 +127,7 @@ export class UsersService {
 
   async uploadAvatar(
     id: string,
-    file: any,
+    file: Express.Multer.File,
     currentUser: AuthUser,
   ): Promise<string> {
     // Check permissions: admin can update any user's avatar, normal user can only update themselves
@@ -202,7 +202,7 @@ export class UsersService {
 
   async addGalleryPhotos(
     id: string,
-    files: any[],
+    files: Express.Multer.File[],
     currentUser: AuthUser,
   ): Promise<string[]> {
     const currentUserId = currentUser._id.toString();
@@ -231,7 +231,9 @@ export class UsersService {
     return this.addToGallery(id, photoUrls);
   }
 
-  async uploadFile(file: any): Promise<{ url: string; type: string }> {
+  async uploadFile(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; type: string }> {
     const uploadResult = await this.cloudinaryService.uploadFile(file);
     if (!uploadResult || !uploadResult.secure_url) {
       throw new BadRequestException("Failed to upload file to Cloudinary");

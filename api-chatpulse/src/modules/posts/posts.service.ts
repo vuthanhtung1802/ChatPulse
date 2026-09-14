@@ -4,11 +4,12 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, QueryFilter } from "mongoose";
 import { Post, PostDocument } from "./schemas/post.schema";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { CommentsService } from "./comments.service";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
+import { PostView } from "./posts.types";
 
 @Injectable()
 export class PostsService {
@@ -43,7 +44,7 @@ export class PostsService {
     limit: number;
   }> {
     const skip = (page - 1) * limit;
-    const filter: any = {};
+    const filter: QueryFilter<PostDocument> = {};
     if (currentUserId) {
       filter.hiddenBy = { $ne: currentUserId };
     }
@@ -78,7 +79,7 @@ export class PostsService {
     currentUserId?: string,
   ): Promise<{ posts: PostDocument[]; total: number }> {
     const skip = (page - 1) * limit;
-    const filter: any = { author: userId };
+    const filter: QueryFilter<PostDocument> = { author: userId };
     if (currentUserId) {
       filter.hiddenBy = { $ne: currentUserId };
     }
@@ -193,7 +194,7 @@ export class PostsService {
     post: PostDocument,
     userId: string,
     savedByMe: boolean = false,
-  ): any {
+  ): PostView {
     const postObj = post.toObject();
     return {
       ...postObj,
@@ -205,7 +206,7 @@ export class PostsService {
     };
   }
 
-  async attachCommentsCount(posts: any[]): Promise<void> {
+  async attachCommentsCount(posts: PostView[]): Promise<void> {
     const postIds = posts.map((p) => p._id.toString());
     const countsMap = await this.commentsService.countByPostIds(postIds);
     for (const post of posts) {
@@ -213,7 +214,7 @@ export class PostsService {
     }
   }
 
-  async uploadFile(file: any): Promise<string> {
+  async uploadFile(file: Express.Multer.File): Promise<string> {
     const uploadResult = await this.cloudinaryService.uploadFile(file, "posts");
     if (!uploadResult || !uploadResult.secure_url) {
       throw new BadRequestException("Failed to upload file to Cloudinary");

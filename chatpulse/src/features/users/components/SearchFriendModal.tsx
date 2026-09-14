@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X,
   Search,
@@ -9,13 +9,14 @@ import {
   MessageSquare,
   UserMinus,
   Users,
-} from 'lucide-react';
-import { useChat } from '../../chat/ChatContext';
-import { useAuth } from '../../auth/AuthContext';
-import { useFriends } from '../../friends/FriendsContext';
-import { friendService } from '../../friends/services/friend.service';
-import { userService } from '../services/user.service';
-import { RelationshipInfo } from '../../../types/Friend';
+} from "lucide-react";
+import { useChat } from "../../chat/ChatContext";
+import { useAuth } from "../../auth/AuthContext";
+import { useFriends } from "../../friends/FriendsContext";
+import { friendService } from "../../friends/services/friend.service";
+import { userService } from "../services/user.service";
+import { RelationshipInfo } from "../../../types/Friend";
+import { ApiUser } from "../../../types/Api";
 
 interface SearchFriendModalProps {
   isOpen: boolean;
@@ -23,9 +24,12 @@ interface SearchFriendModalProps {
 }
 
 const FALLBACK_AVATAR =
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150';
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150";
 
-export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, onClose }) => {
+export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const { createConversation, createGroupConversation } = useChat();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -38,21 +42,25 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
     declineRequest,
     removeFriend,
   } = useFriends();
-  const [activeTab, setActiveTab] = useState<'search' | 'friends' | 'group'>('search');
-  const [groupName, setGroupName] = useState('');
+  const [activeTab, setActiveTab] = useState<"search" | "friends" | "group">(
+    "search",
+  );
+  const [groupName, setGroupName] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState<any[]>([]);
-  const [statusMap, setStatusMap] = useState<Record<string, RelationshipInfo>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [statusMap, setStatusMap] = useState<Record<string, RelationshipInfo>>(
+    {},
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     if (!isOpen) {
       setUsers([]);
       setStatusMap({});
-      setSearchTerm('');
-      setActiveTab('search');
-      setGroupName('');
+      setSearchTerm("");
+      setActiveTab("search");
+      setGroupName("");
       setSelectedFriends([]);
       return;
     }
@@ -67,11 +75,13 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
       setIsLoading(true);
       try {
         const data = await userService.searchUsers(searchTerm);
-        const filtered = (data.users || data).filter((u: any) => u._id !== currentUser?.id);
+        const filtered = ((data.users || data) as ApiUser[]).filter(
+          (user) => user._id !== currentUser?.id,
+        );
         setUsers(filtered);
 
         const unknownIds = filtered
-          .map((u: any) => u._id || u.id)
+          .map((user) => user._id || user.id || "")
           .filter((id: string) => !relationships[id]);
         if (unknownIds.length > 0) {
           const res = await friendService.getStatuses(unknownIds);
@@ -82,7 +92,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
           setStatusMap(map);
         }
       } catch (err) {
-        console.error('Failed to search users', err);
+        console.error("Failed to search users", err);
       } finally {
         setIsLoading(false);
       }
@@ -102,9 +112,9 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
     try {
       await createConversation(id);
       onClose();
-      navigate('/messages');
+      navigate("/messages");
     } catch (err) {
-      console.error('Failed to start conversation', err);
+      console.error("Failed to start conversation", err);
     }
   };
 
@@ -118,10 +128,10 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
 
   const settleRequest = (
     requestId: string | undefined,
-    action: 'accept' | 'decline',
+    action: "accept" | "decline",
   ) => {
     if (!requestId) return;
-    if (action === 'accept') {
+    if (action === "accept") {
       acceptRequest(requestId);
     } else {
       declineRequest(requestId);
@@ -132,9 +142,9 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
     <div className="flex gap-1.5 px-4 py-3 border-b border-outline-variant/60">
       {(
         [
-          { key: 'search', label: 'Search', icon: Search },
-          { key: 'friends', label: 'Friends', icon: Users },
-          { key: 'group', label: 'New group', icon: Users },
+          { key: "search", label: "Search", icon: Search },
+          { key: "friends", label: "Friends", icon: Users },
+          { key: "group", label: "New group", icon: Users },
         ] as const
       ).map((tab) => (
         <button
@@ -142,8 +152,8 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
           onClick={() => setActiveTab(tab.key)}
           className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
             activeTab === tab.key
-              ? 'bg-primary text-on-primary'
-              : 'text-on-surface-variant hover:bg-surface-container-high'
+              ? "bg-primary text-on-primary"
+              : "text-on-surface-variant hover:bg-surface-container-high"
           }`}
         >
           <tab.icon size={14} />
@@ -157,7 +167,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
     if (!groupName.trim() || selectedFriends.length < 2) return;
     await createGroupConversation(groupName.trim(), selectedFriends);
     onClose();
-    navigate('/messages');
+    navigate("/messages");
   };
 
   const renderGroupTab = () => (
@@ -169,21 +179,36 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
         maxLength={60}
         className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-hidden"
       />
-      <p className="text-xs text-on-surface-variant">Chọn ít nhất 2 người bạn</p>
+      <p className="text-xs text-on-surface-variant">
+        Chọn ít nhất 2 người bạn
+      </p>
       <div className="space-y-1">
         {friends.map((friend) => {
           const checked = selectedFriends.includes(friend._id);
           return (
-            <label key={friend._id} className="flex cursor-pointer items-center gap-3 rounded-xl p-2.5 hover:bg-surface-container-high/60">
+            <label
+              key={friend._id}
+              className="flex cursor-pointer items-center gap-3 rounded-xl p-2.5 hover:bg-surface-container-high/60"
+            >
               <input
                 type="checkbox"
                 checked={checked}
-                onChange={() => setSelectedFriends((current) =>
-                  checked ? current.filter((id) => id !== friend._id) : [...current, friend._id],
-                )}
+                onChange={() =>
+                  setSelectedFriends((current) =>
+                    checked
+                      ? current.filter((id) => id !== friend._id)
+                      : [...current, friend._id],
+                  )
+                }
               />
-              <img src={friend.avatar || FALLBACK_AVATAR} alt={friend.name} className="h-9 w-9 rounded-lg object-cover" />
-              <span className="text-sm font-semibold text-on-surface">{friend.name}</span>
+              <img
+                src={friend.avatar || FALLBACK_AVATAR}
+                alt={friend.name}
+                className="h-9 w-9 rounded-lg object-cover"
+              />
+              <span className="text-sm font-semibold text-on-surface">
+                {friend.name}
+              </span>
             </label>
           );
         })}
@@ -214,7 +239,8 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
         {incomingRequests.length > 0 ? (
           <div className="space-y-1">
             {incomingRequests.map((req) => {
-              const sender = typeof req.requester === 'object' ? req.requester : null;
+              const sender =
+                typeof req.requester === "object" ? req.requester : null;
               return (
                 <div
                   key={req._id}
@@ -223,29 +249,29 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={sender?.avatar || FALLBACK_AVATAR}
-                      alt={sender?.name ?? ''}
+                      alt={sender?.name ?? ""}
                       referrerPolicy="no-referrer"
                       className="w-10 h-10 rounded-xl object-cover"
                     />
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-on-surface truncate">
-                        {sender?.name ?? 'Người dùng'}
+                        {sender?.name ?? "Người dùng"}
                       </div>
                       <div className="text-xs text-on-surface-variant opacity-80 truncate">
-                        {sender?.email ?? ''}
+                        {sender?.email ?? ""}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     <button
-                      onClick={() => settleRequest(req._id, 'accept')}
+                      onClick={() => settleRequest(req._id, "accept")}
                       className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold flex items-center gap-1.5 hover:bg-primary-container hover:text-on-primary-container transition-colors cursor-pointer"
                     >
                       <UserCheck size={13} />
                       <span>Accept</span>
                     </button>
                     <button
-                      onClick={() => settleRequest(req._id, 'decline')}
+                      onClick={() => settleRequest(req._id, "decline")}
                       className="px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-semibold hover:text-error transition-colors cursor-pointer"
                     >
                       Decline
@@ -287,7 +313,9 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                     />
                     <div
                       className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface-container-low ${
-                        friend.status === 'online' ? 'bg-secondary' : 'bg-outline-variant'
+                        friend.status === "online"
+                          ? "bg-secondary"
+                          : "bg-outline-variant"
                       }`}
                     ></div>
                   </div>
@@ -296,7 +324,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                       {friend.name}
                     </div>
                     <div className="text-xs text-on-surface-variant opacity-80">
-                      {friend.status === 'online' ? 'Active Now' : 'Offline'}
+                      {friend.status === "online" ? "Active Now" : "Offline"}
                     </div>
                   </div>
                 </div>
@@ -331,7 +359,6 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
       <div className="bg-surface-container-low border border-outline-variant rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-        
         {/* Header */}
         <div className="p-4 border-b border-outline-variant/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -339,10 +366,14 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
               <UserPlus size={16} />
             </div>
             <h3 className="font-display font-bold text-base text-on-surface">
-              {activeTab === 'friends' ? 'Friends' : activeTab === 'group' ? 'Create group' : 'Search Friend'}
+              {activeTab === "friends"
+                ? "Friends"
+                : activeTab === "group"
+                  ? "Create group"
+                  : "Search Friend"}
             </h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-1.5 hover:bg-surface-container-high rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
           >
@@ -355,15 +386,18 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
 
         {/* Content */}
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          {activeTab === 'group' ? (
+          {activeTab === "group" ? (
             renderGroupTab()
-          ) : activeTab === 'friends' ? (
+          ) : activeTab === "friends" ? (
             renderFriendsTab()
           ) : (
             <>
               {/* Search */}
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-3.5 text-on-surface-variant/50" />
+                <Search
+                  size={16}
+                  className="absolute left-3 top-3.5 text-on-surface-variant/50"
+                />
                 <input
                   type="text"
                   value={searchTerm}
@@ -380,11 +414,11 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                     Searching users...
                   </div>
                 ) : users.length > 0 ? (
-                  users.map(user => {
+                  users.map((user) => {
                     const userId = user._id || user.id;
                     const avatarUrl = user.avatar || FALLBACK_AVATAR;
                     const relationship = getRelationship(userId);
-                    const status = relationship?.status ?? 'none';
+                    const status = relationship?.status ?? "none";
 
                     return (
                       <div
@@ -409,7 +443,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          {status === 'friends' && (
+                          {status === "friends" && (
                             <>
                               <button
                                 onClick={() => handleUnfriend(userId)}
@@ -428,24 +462,34 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                             </>
                           )}
 
-                          {status === 'sent' && (
+                          {status === "sent" && (
                             <span className="px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-semibold flex items-center gap-1.5 opacity-80">
                               <Clock size={13} />
                               <span>Requested</span>
                             </span>
                           )}
 
-                          {status === 'received' && (
+                          {status === "received" && (
                             <>
                               <button
-                                onClick={() => settleRequest(relationship?.requestId, 'accept')}
+                                onClick={() =>
+                                  settleRequest(
+                                    relationship?.requestId,
+                                    "accept",
+                                  )
+                                }
                                 className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold flex items-center gap-1 hover:bg-primary-container hover:text-on-primary-container transition-colors cursor-pointer"
                               >
                                 <UserCheck size={13} />
                                 <span>Accept</span>
                               </button>
                               <button
-                                onClick={() => settleRequest(relationship?.requestId, 'decline')}
+                                onClick={() =>
+                                  settleRequest(
+                                    relationship?.requestId,
+                                    "decline",
+                                  )
+                                }
                                 className="px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-semibold hover:text-error transition-colors cursor-pointer"
                               >
                                 Decline
@@ -453,7 +497,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
                             </>
                           )}
 
-                          {status === 'none' && (
+                          {status === "none" && (
                             <button
                               onClick={() => handleAddFriend(userId)}
                               className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold flex items-center gap-1.5 hover:bg-primary-container hover:text-on-primary-container transition-colors cursor-pointer"
@@ -479,7 +523,6 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({ isOpen, on
             </>
           )}
         </div>
-
       </div>
     </div>
   );

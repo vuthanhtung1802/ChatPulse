@@ -11,6 +11,7 @@ import {
   FriendRequestDocument,
 } from "./schemas/friend-request.schema";
 import { UsersService } from "../users/users.service";
+import { FriendProfile, FriendView } from "./friends.types";
 
 export type RelationshipStatus = "none" | "sent" | "received" | "friends";
 
@@ -151,7 +152,7 @@ export class FriendsService {
     });
   }
 
-  async getFriends(userId: string): Promise<any[]> {
+  async getFriends(userId: string): Promise<FriendView[]> {
     const userObjectId = new Types.ObjectId(userId);
 
     const requests = await this.friendRequestModel
@@ -165,8 +166,8 @@ export class FriendsService {
       .exec();
 
     return requests.map((request) => {
-      const requester = request.requester as any;
-      const addressee = request.addressee as any;
+      const requester = request.requester as unknown as FriendProfile;
+      const addressee = request.addressee as unknown as FriendProfile;
       const friend =
         requester._id.toString() === userId ? addressee : requester;
       return {
@@ -176,7 +177,7 @@ export class FriendsService {
         avatar: friend.avatar,
         status: friend.status,
         requestId: request._id,
-        friendsSince: (request as any).updatedAt,
+        friendsSince: (request as unknown as { updatedAt: Date }).updatedAt,
       };
     });
   }

@@ -1,90 +1,138 @@
-import { User, Conversation, Message } from '../types/types';
-import { getInitialsAvatar } from './avatarUtils';
+import {
+  ApiConversation,
+  ApiMessage,
+  ApiUser,
+  ApiUserReference,
+} from "../types/Api";
+import { Conversation, Message, User } from "../types/types";
+import { getInitialsAvatar } from "./avatarUtils";
 
-export const transformUser = (u: any): User => {
-  const name = u.name || '';
+const RECALLED_MESSAGE = "Tin nhắn đã bị thu hồi";
+const ATTACHMENT_MESSAGE = "Gửi một file đính kèm";
+const EMPTY_CONVERSATION = "Chưa có tin nhắn";
+
+function getUserId(user?: ApiUserReference): string {
+  if (!user) return "";
+  return typeof user === "string" ? user : (user._id ?? user.id ?? "");
+}
+
+function getPopulatedUser(user?: ApiUserReference): ApiUser {
+  return typeof user === "object" ? user : {};
+}
+
+function formatMessageTime(createdAt?: string): string {
+  if (!createdAt) return "";
+  return new Date(createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getConversationPreview(message?: ApiMessage): string {
+  if (!message) return EMPTY_CONVERSATION;
+  if (message.isRecalled) return RECALLED_MESSAGE;
+  return (
+    message.content ||
+    (message.attachmentUrl ? ATTACHMENT_MESSAGE : EMPTY_CONVERSATION)
+  );
+}
+
+export function transformUser(user: ApiUser): User {
+  const name = user.name || "";
   return {
-    id: u._id || u.id,
+    id: user._id || user.id || "",
     name,
-    email: u.email || '',
-    avatar: u.avatar || getInitialsAvatar(name),
-    role: u.role || 'user',
-    plan: u.role === 'admin' ? 'Enterprise Plan' : 'Free Plan',
-    status: u.status || 'offline',
-    bio: u.bio || '',
-    location: u.location || '',
-    joinDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
-    website: u.website || '',
-    interests: u.interests || [],
-    photoGallery: u.photoGallery || []
+    email: user.email || "",
+    avatar: user.avatar || getInitialsAvatar(name),
+    role: user.role || "user",
+    plan: user.role === "admin" ? "Enterprise Plan" : "Free Plan",
+    status: user.status || "offline",
+    bio: user.bio || "",
+    location: user.location || "",
+    joinDate: user.createdAt
+      ? new Date(user.createdAt).toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })
+      : "",
+    website: user.website || "",
+    interests: user.interests || [],
+    photoGallery: user.photoGallery || [],
   };
-};
+}
 
-export const transformConversation = (c: any, currentUserId: string): Conversation => {
-  if (c.isGroup) {
-    const lastMsgText = c.lastMessage?.isRecalled 
-      ? 'Tin nhắn đã bị thu hồi' 
-      : (c.lastMessage?.content || (c.lastMessage?.attachmentUrl ? 'Gửi một file đính kèm' : 'Chưa có tin nhắn'));
-    const lastMsgTime = c.lastMessage 
-      ? new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-      : '';
+export function transformConversation(
+  conversation: ApiConversation,
+  currentUserId: string,
+): Conversation {
+  const lastMessageText = getConversationPreview(conversation.lastMessage);
+  const lastMessageTime = formatMessageTime(
+    conversation.lastMessage?.createdAt,
+  );
+
+  if (conversation.isGroup) {
+    const groupName = conversation.groupName || "Nhóm chat";
     return {
-      id: c._id,
-      participantName: c.groupName || 'Nhóm chat',
-      participantAvatar: '',
-      participantStatus: 'online',
-      lastMessageText: lastMsgText,
-      lastMessageTime: lastMsgTime,
+      id: conversation._id,
+      participantName: groupName,
+      participantAvatar: "",
+      participantStatus: "online",
+      lastMessageText,
+      lastMessageTime,
       lastMessageUnread: false,
       isGroup: true,
-      groupInitials: (c.groupName || 'GP').substring(0, 2).toUpperCase()
-    };
-  } else {
-    const otherParticipant = c.participants?.find((p: any) => (p._id || p) !== currentUserId) || c.participants?.[0] || {};
-    const lastMsgText = c.lastMessage?.isRecalled 
-      ? 'Tin nhắn đã bị thu hồi' 
-      : (c.lastMessage?.content || (c.lastMessage?.attachmentUrl ? 'Gửi một file đính kèm' : 'Chưa có tin nhắn'));
-    const lastMsgTime = c.lastMessage 
-      ? new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-      : '';
-    return {
-      id: c._id,
-      participantId: otherParticipant._id || otherParticipant,
-      participantName: otherParticipant.name || 'Unknown User',
-      participantAvatar: otherParticipant.avatar || getInitialsAvatar(otherParticipant.name),
-      participantStatus: otherParticipant.status || 'offline',
-      lastMessageText: lastMsgText,
-      lastMessageTime: lastMsgTime,
-      lastMessageUnread: false
+      groupInitials: groupName.substring(0, 2).toUpperCase(),
     };
   }
-};
 
-export const transformMessage = (msg: any): Message => {
-  const senderId = msg.sender?._id || msg.sender;
+  const participantReference =
+    conversation.participants?.find(
+      (participant) => getUserId(participant) !== currentUserId,
+    ) ?? conversation.participants?.[0];
+  const participant = getPopulatedUser(participantReference);
+  const participantName = participant.name || "Unknown User";
+
   return {
-    id: msg._id,
-    conversationId: msg.conversationId?.toString?.() || msg.conversationId,
-    replyTo: msg.replyTo
+    id: conversation._id,
+    participantId: getUserId(participantReference),
+    participantName,
+    participantAvatar: participant.avatar || getInitialsAvatar(participantName),
+    participantStatus: participant.status || "offline",
+    lastMessageText,
+    lastMessageTime,
+    lastMessageUnread: false,
+  };
+}
+
+export function transformMessage(message: ApiMessage): Message {
+  const sender = getPopulatedUser(message.sender);
+  const recalled = Boolean(message.isRecalled);
+
+  return {
+    id: message._id,
+    conversationId: message.conversationId?.toString(),
+    replyTo: message.replyTo
       ? {
-          id: msg.replyTo._id,
-          text: msg.replyTo.isRecalled ? 'Tin nhắn đã bị thu hồi' : msg.replyTo.content,
-          senderName: msg.replyTo.sender?.name || '',
-          isRecalled: msg.replyTo.isRecalled,
+          id: message.replyTo._id,
+          text: message.replyTo.isRecalled
+            ? RECALLED_MESSAGE
+            : message.replyTo.content || "",
+          senderName: getPopulatedUser(message.replyTo.sender).name || "",
+          isRecalled: message.replyTo.isRecalled,
         }
       : undefined,
-    reactions: (msg.reactions || []).map((reaction: any) => ({
-      user: reaction.user?._id || reaction.user,
+    reactions: (message.reactions || []).map((reaction) => ({
+      user: getUserId(reaction.user),
       emoji: reaction.emoji,
     })),
-    text: msg.isRecalled ? 'Tin nhắn đã bị thu hồi' : (msg.content || ''),
-    senderId: senderId,
-    senderName: msg.sender?.name || '',
-    senderAvatar: msg.sender?.avatar || getInitialsAvatar(msg.sender?.name),
-    timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    status: msg.isRecalled ? undefined : (msg.status || 'sent'),
-    attachmentUrl: msg.isRecalled ? undefined : (msg.attachmentUrl || undefined),
-    attachmentType: msg.isRecalled ? undefined : (msg.attachmentType || undefined),
-    isRecalled: !!msg.isRecalled,
+    text: recalled ? RECALLED_MESSAGE : message.content || "",
+    senderId: getUserId(message.sender),
+    senderName: sender.name || "",
+    senderAvatar: sender.avatar || getInitialsAvatar(sender.name),
+    timestamp: formatMessageTime(message.createdAt),
+    status: recalled ? undefined : message.status || "sent",
+    attachmentUrl: recalled ? undefined : message.attachmentUrl || undefined,
+    attachmentType: recalled ? undefined : message.attachmentType,
+    isRecalled: recalled,
   };
-};
+}

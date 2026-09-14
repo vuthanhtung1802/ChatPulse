@@ -11,6 +11,7 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UserDocument } from "../users/schemas/user.schema";
 import { StringValue } from "ms";
+import { AuthTokens, LoginResult } from "./auth.types";
 
 @Injectable()
 export class AuthService {
@@ -39,10 +40,7 @@ export class AuthService {
     return user;
   }
 
-  async generateTokens(
-    userId: string,
-    email: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async generateTokens(userId: string, email: string): Promise<AuthTokens> {
     const payload = { email, sub: userId };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -64,9 +62,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async login(
-    loginDto: LoginDto,
-  ): Promise<{ accessToken: string; refreshToken: string; user: any }> {
+  async login(loginDto: LoginDto): Promise<LoginResult> {
     const { email, password } = loginDto;
 
     const user = await this.usersService.findByEmail(email);
@@ -91,7 +87,7 @@ export class AuthService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       user: {
-        id: user._id,
+        id: user._id.toString(),
         name: user.name,
         email: user.email,
         role: user.role,
@@ -108,7 +104,7 @@ export class AuthService {
   async refreshTokens(
     userId: string,
     refreshToken: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<AuthTokens> {
     const user = await this.usersService.findById(userId);
     if (!user || !user.refreshTokens || user.refreshTokens.length === 0) {
       throw new UnauthorizedException("Access Denied");

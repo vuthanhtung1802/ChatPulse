@@ -7,24 +7,7 @@ import {
 } from "../../types/Friend";
 import { friendService } from "./services/friend.service";
 import { socketService } from "../chat/services/socket.service";
-
-function getOther(request: FriendRequest, myId: string): FriendItem | null {
-  const requester =
-    typeof request.requester === "object" ? request.requester : null;
-  const addressee =
-    typeof request.addressee === "object" ? request.addressee : null;
-  const other = requester && requester._id === myId ? addressee : requester;
-  if (!other) return null;
-  return {
-    _id: other._id,
-    name: other.name ?? "",
-    email: other.email ?? "",
-    avatar: other.avatar ?? "",
-    status: other.status ?? "offline",
-    requestId: request._id,
-    friendsSince: request.updatedAt ?? request.createdAt,
-  };
-}
+import { buildRelationshipMap, getFriendFromRequest } from "./friendState";
 
 export function useFriendsState(currentUser: User | null) {
   const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -57,33 +40,9 @@ export function useFriendsState(currentUser: User | null) {
       setIncomingRequests(incoming);
       setSentRequests(sent);
 
-      const rel: Record<string, RelationshipInfo> = {};
-      for (const friend of friendsRes.friends as FriendItem[]) {
-        rel[friend._id] = { userId: friend._id, status: "friends" };
-      }
-      for (const req of incoming) {
-        const senderId =
-          typeof req.requester === "object" ? req.requester._id : "";
-        if (senderId) {
-          rel[senderId] = {
-            userId: senderId,
-            status: "received",
-            requestId: req._id,
-          };
-        }
-      }
-      for (const req of sent) {
-        const targetId =
-          typeof req.addressee === "object" ? req.addressee._id : "";
-        if (targetId) {
-          rel[targetId] = {
-            userId: targetId,
-            status: "sent",
-            requestId: req._id,
-          };
-        }
-      }
-      setRelationships(rel);
+      setRelationships(
+        buildRelationshipMap(myId, friendsRes.friends, incoming, sent),
+      );
     } catch (err) {
       console.error("Failed to load friends data", err);
     }
@@ -125,7 +84,7 @@ export function useFriendsState(currentUser: User | null) {
     const handleAccepted = ({ request }: { request: FriendRequest }) => {
       const myId = currentUserIdRef.current;
       if (!myId) return;
-      const friend = getOther(request, myId);
+      const friend = getFriendFromRequest(request, myId);
       if (!friend) return;
 
       setFriends((prev) =>
@@ -192,7 +151,7 @@ export function useFriendsState(currentUser: User | null) {
     try {
       const request = await socketService.sendFriendRequest(targetUserId);
       if (request.status === "accepted") {
-        const friend = getOther(request, myId);
+        const friend = getFriendFromRequest(request, myId);
         if (friend) {
           setFriends((prev) =>
             prev.some((item) => item._id === friend._id)
@@ -236,7 +195,7 @@ export function useFriendsState(currentUser: User | null) {
     try {
       await socketService.acceptFriendRequest(requestId);
       if (request && myId) {
-        const friend = getOther(request, myId);
+        const friend = getFriendFromRequest(request, myId);
         if (friend) {
           setFriends((prev) =>
             prev.some((f) => f._id === friend._id) ? prev : [friend, ...prev],

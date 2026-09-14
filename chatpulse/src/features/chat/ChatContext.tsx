@@ -1,11 +1,8 @@
-import React, { createContext, useContext, useEffect } from 'react';
-import { Conversation, Message } from '../../types/types';
-import { useChatState } from './useChat';
-import { chatService } from './services/chat.service';
-import { socketService } from './services/socket.service';
-import { tokenStorage } from '../../lib/api/client';
-import { transformConversation } from '../../utils/transformers';
-import { useAuth } from '../auth/AuthContext';
+import React, { createContext, useContext } from "react";
+import { Conversation, Message } from "../../types/types";
+import { useChatState } from "./useChat";
+import { useAuth } from "../auth/AuthContext";
+import { useChatSession } from "./useChatSession";
 
 interface ChatContextValue {
   conversations: Conversation[];
@@ -20,7 +17,7 @@ interface ChatContextValue {
   sendMessage: (
     text: string,
     attachmentUrl?: string,
-    attachmentType?: 'image' | 'video',
+    attachmentType?: "image" | "video",
     replyTo?: Message,
   ) => void;
   retryMessage: (messageId: string) => void;
@@ -63,52 +60,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     clearChat,
   } = useChatState(currentUser);
 
-  // Open/close the realtime socket connection based on auth state.
-  const userId = currentUser?.id;
-  useEffect(() => {
-    const token = tokenStorage.getAccessToken();
-    if (userId && token) {
-      socketService.connect(token);
-    } else {
-      socketService.disconnect();
-    }
-    return () => {
-      socketService.disconnect();
-    };
-  }, [userId]);
-
-  // Load conversations once a session is restored / user logs in.
-  useEffect(() => {
-    if (!currentUser) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const convsRes = await chatService.getConversations();
-        if (cancelled) return;
-        const convs = (
-          Array.isArray(convsRes) ? convsRes : convsRes.conversations || []
-        ).map((c: any) => transformConversation(c, currentUser.id));
-        setConversations((prev) => (prev.length > 0 ? prev : convs));
-        setActiveConversationId((prev) =>
-          prev || (convs.length > 0 ? convs[0].id : ''),
-        );
-      } catch (err) {
-        console.error('Failed to load conversations', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
-
-  // Reset chat state on logout.
-  useEffect(() => {
-    if (!currentUser) {
-      clearChat();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  useChatSession({
+    currentUser,
+    setConversations,
+    setActiveConversationId,
+    clearChat,
+  });
 
   return (
     <ChatContext.Provider
@@ -140,7 +97,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useChat = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {
-    throw new Error('useChat must be used within a ChatProvider');
+    throw new Error("useChat must be used within a ChatProvider");
   }
   return context;
 };

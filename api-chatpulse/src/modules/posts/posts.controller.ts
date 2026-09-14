@@ -145,7 +145,7 @@ export class PostsController {
 
   @Post("upload")
   @UseInterceptors(FileInterceptor("file"))
-  async uploadFile(@UploadedFile() file: any) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("File is required");
     }

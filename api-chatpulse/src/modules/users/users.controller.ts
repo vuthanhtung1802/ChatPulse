@@ -56,7 +56,7 @@ export class UsersController {
   async uploadGallery(
     @Param("id") id: string,
     @CurrentUser() user: AuthUser,
-    @UploadedFiles() files: any[],
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException("At least one image file is required");
@@ -71,7 +71,7 @@ export class UsersController {
 
   @Post("upload")
   @UseInterceptors(FileInterceptor("file"))
-  async uploadFile(@UploadedFile() file: any) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("File is required");
     }
@@ -120,7 +120,7 @@ export class UsersController {
   async uploadAvatar(
     @Param("id") id: string,
     @CurrentUser() user: AuthUser,
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException("Avatar file is required");

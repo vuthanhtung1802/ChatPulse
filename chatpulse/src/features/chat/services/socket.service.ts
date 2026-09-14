@@ -1,71 +1,14 @@
 import { io, Socket } from "socket.io-client";
 import { WS_URL } from "../../../config/env";
 import { FriendRequest } from "../../../types/Friend";
+import {
+  Acknowledgement,
+  EventHandler,
+  SendMessagePayload,
+  SocketEvent,
+} from "./socket.types";
 
-export interface MessageDoc {
-  _id: string;
-  conversationId: string;
-  sender:
-    { _id: string; name: string; email?: string; avatar?: string } | string;
-  content: string;
-  attachmentUrl?: string;
-  attachmentType?: string;
-  status?: string;
-  isRecalled?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UserStatusPayload {
-  userId: string;
-  status: "online" | "offline";
-}
-
-export interface TypingPayload {
-  conversationId: string;
-  userId: string;
-  isTyping: boolean;
-}
-
-export interface MessageSeenPayload {
-  conversationId: string;
-  seenBy: string;
-}
-
-export interface MessageRecalledPayload {
-  conversationId: string;
-  messageId: string;
-}
-
-export interface SendMessagePayload {
-  conversationId: string;
-  content?: string;
-  attachmentUrl?: string;
-  attachmentType?: "image" | "video";
-  clientMessageId: string;
-  replyTo?: string;
-}
-
-export interface FriendRequestPayload {
-  requestId: string;
-}
-
-export type SocketEvent =
-  | "messageReceived"
-  | "messageSeen"
-  | "messageRecalled"
-  | "messageReactionUpdated"
-  | "conversationCreated"
-  | "typing"
-  | "userStatusChanged"
-  | "friendRequestReceived"
-  | "friendRequestAccepted"
-  | "friendRequestDeclined"
-  | "friendRemoved"
-  | "connect"
-  | "disconnect";
-
-type EventHandler = (...args: any[]) => void;
+export type { SendMessagePayload } from "./socket.types";
 
 /**
  * Singleton wrapper around the Socket.IO client.
@@ -147,10 +90,7 @@ class SocketService {
         .emit(
           event,
           payload,
-          (
-            timeoutError: Error | null,
-            response?: { ok: true; data?: T } | { ok: false; error: string },
-          ) => {
+          (timeoutError: Error | null, response?: Acknowledgement<T>) => {
             if (timeoutError) {
               reject(timeoutError);
             } else if (!response) {

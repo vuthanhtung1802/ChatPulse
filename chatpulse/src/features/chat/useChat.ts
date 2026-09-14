@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Conversation, Message, User } from "../../types/types";
+import { ApiConversation, ApiMessage } from "../../types/Api";
 import { chatService } from "./services/chat.service";
 import { socketService, SendMessagePayload } from "./services/socket.service";
 import {
@@ -160,9 +161,8 @@ export function useChatState(currentUser: User | null) {
 
   // ---------- Socket event handlers ----------
 
-  const handleMessageReceived = (msgDoc: any) => {
-    const conversationId =
-      msgDoc?.conversationId?.toString?.() ?? msgDoc?.conversationId;
+  const handleMessageReceived = (msgDoc: ApiMessage) => {
+    const conversationId = msgDoc.conversationId?.toString();
     if (!conversationId) return;
 
     const message = transformMessage(msgDoc);
@@ -316,7 +316,7 @@ export function useChatState(currentUser: User | null) {
   const handleConversationCreated = ({
     conversation,
   }: {
-    conversation: any;
+    conversation: ApiConversation;
   }) => {
     const userId = currentUserIdRef.current;
     if (!userId) return;
@@ -537,14 +537,14 @@ export function useChatState(currentUser: User | null) {
     }
   };
 
-  const clearChat = () => {
+  const clearChat = useCallback(() => {
     setConversations([]);
     setMessages({});
     setActiveConversationId("");
     setIsTyping({});
     setHasMoreMessages({});
     messagePagesRef.current = {};
-  };
+  }, []);
 
   return {
     conversations,

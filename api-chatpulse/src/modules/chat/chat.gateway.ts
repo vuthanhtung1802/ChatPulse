@@ -18,28 +18,14 @@ import { UsersService } from "../users/users.service";
 import { FriendsService } from "../friends/friends.service";
 import { FriendRequestDocument } from "../friends/schemas/friend-request.schema";
 import { ConversationDocument } from "./schemas/conversation.schema";
-
-const userRoom = (userId: string) => `user:${userId}`;
-const conversationRoom = (conversationId: string) =>
-  `conversation:${conversationId}`;
-
-interface SendMessagePayload {
-  conversationId: string;
-  content?: string;
-  attachmentUrl?: string;
-  attachmentType?: string;
-  clientMessageId?: string;
-  replyTo?: string;
-}
-
-interface TypingPayload {
-  conversationId: string;
-  isTyping: boolean;
-}
-
-type SocketAck<T = undefined> = (
-  response: { ok: true; data?: T } | { ok: false; error: string },
-) => void;
+import {
+  conversationRoom,
+  getErrorMessage,
+  SendMessagePayload,
+  SocketAck,
+  TypingPayload,
+  userRoom,
+} from "./chat-realtime.types";
 
 @WebSocketGateway({
   cors: {
@@ -82,10 +68,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .in(userRoom(userId))
       .socketsLeave(conversationRoom(conversationId));
-  }
-
-  private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : "Request failed";
   }
 
   async handleConnection(client: Socket): Promise<void> {
@@ -298,7 +280,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       acknowledge?.({ ok: true, data: populated });
     } catch (error) {
-      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+      acknowledge?.({ ok: false, error: getErrorMessage(error) });
     }
   }
 
@@ -322,7 +304,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit("friendRequestAccepted", { request: populated });
       acknowledge?.({ ok: true, data: populated });
     } catch (error) {
-      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+      acknowledge?.({ ok: false, error: getErrorMessage(error) });
     }
   }
 
@@ -346,7 +328,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       acknowledge?.({ ok: true });
     } catch (error) {
-      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+      acknowledge?.({ ok: false, error: getErrorMessage(error) });
     }
   }
 
@@ -364,7 +346,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit("friendRemoved", { by: userId });
       acknowledge?.({ ok: true });
     } catch (error) {
-      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+      acknowledge?.({ ok: false, error: getErrorMessage(error) });
     }
   }
 }
