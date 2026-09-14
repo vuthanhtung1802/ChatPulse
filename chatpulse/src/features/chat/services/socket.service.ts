@@ -1,12 +1,12 @@
-import { io, Socket } from 'socket.io-client';
-import { WS_URL } from '../../../config/env';
+import { io, Socket } from "socket.io-client";
+import { WS_URL } from "../../../config/env";
+import { FriendRequest } from "../../../types/Friend";
 
 export interface MessageDoc {
   _id: string;
   conversationId: string;
   sender:
-    | { _id: string; name: string; email?: string; avatar?: string }
-    | string;
+    { _id: string; name: string; email?: string; avatar?: string } | string;
   content: string;
   attachmentUrl?: string;
   attachmentType?: string;
@@ -18,7 +18,7 @@ export interface MessageDoc {
 
 export interface UserStatusPayload {
   userId: string;
-  status: 'online' | 'offline';
+  status: "online" | "offline";
 }
 
 export interface TypingPayload {
@@ -41,7 +41,7 @@ export interface SendMessagePayload {
   conversationId: string;
   content?: string;
   attachmentUrl?: string;
-  attachmentType?: 'image' | 'video';
+  attachmentType?: "image" | "video";
   clientMessageId: string;
   replyTo?: string;
 }
@@ -51,18 +51,19 @@ export interface FriendRequestPayload {
 }
 
 export type SocketEvent =
-  | 'messageReceived'
-  | 'messageSeen'
-  | 'messageRecalled'
-  | 'messageReactionUpdated'
-  | 'typing'
-  | 'userStatusChanged'
-  | 'friendRequestReceived'
-  | 'friendRequestAccepted'
-  | 'friendRequestDeclined'
-  | 'friendRemoved'
-  | 'connect'
-  | 'disconnect';
+  | "messageReceived"
+  | "messageSeen"
+  | "messageRecalled"
+  | "messageReactionUpdated"
+  | "conversationCreated"
+  | "typing"
+  | "userStatusChanged"
+  | "friendRequestReceived"
+  | "friendRequestAccepted"
+  | "friendRequestDeclined"
+  | "friendRemoved"
+  | "connect"
+  | "disconnect";
 
 type EventHandler = (...args: any[]) => void;
 
@@ -80,7 +81,7 @@ class SocketService {
 
     this.socket = io(WS_URL, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ["websocket"],
     });
 
     for (const [event, handlers] of this.listeners) {
@@ -113,56 +114,91 @@ class SocketService {
   }
 
   joinConversation(conversationId: string): void {
-    this.socket?.emit('joinConversation', { conversationId });
+    this.socket?.emit("joinConversation", { conversationId });
   }
 
   leaveConversation(conversationId: string): void {
-    this.socket?.emit('leaveConversation', { conversationId });
+    this.socket?.emit("leaveConversation", { conversationId });
   }
 
   sendMessage(payload: SendMessagePayload): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket?.connected) {
-        reject(new Error('Socket is disconnected'));
+        reject(new Error("Socket is disconnected"));
         return;
       }
-      this.socket.timeout(8000).emit('sendMessage', payload, (error: Error | null) => {
-        if (error) reject(error);
-        else resolve();
-      });
+      this.socket
+        .timeout(8000)
+        .emit("sendMessage", payload, (error: Error | null) => {
+          if (error) reject(error);
+          else resolve();
+        });
+    });
+  }
+
+  private emitWithAck<T>(event: string, payload: unknown): Promise<T> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        reject(new Error("Socket is disconnected"));
+        return;
+      }
+      this.socket
+        .timeout(8000)
+        .emit(
+          event,
+          payload,
+          (
+            timeoutError: Error | null,
+            response?: { ok: true; data?: T } | { ok: false; error: string },
+          ) => {
+            if (timeoutError) {
+              reject(timeoutError);
+            } else if (!response) {
+              reject(new Error("Request failed"));
+            } else if (response.ok === false) {
+              reject(new Error(response.error));
+            } else {
+              resolve(response.data as T);
+            }
+          },
+        );
     });
   }
 
   emitTyping(conversationId: string, isTyping: boolean): void {
-    this.socket?.emit('typing', { conversationId, isTyping });
+    this.socket?.emit("typing", { conversationId, isTyping });
   }
 
   emitSeen(conversationId: string): void {
-    this.socket?.emit('seenMessage', { conversationId });
+    this.socket?.emit("seenMessage", { conversationId });
   }
 
   emitRecall(messageId: string): void {
-    this.socket?.emit('recallMessage', { messageId });
+    this.socket?.emit("recallMessage", { messageId });
   }
 
   toggleReaction(messageId: string, emoji: string): void {
-    this.socket?.emit('toggleReaction', { messageId, emoji });
+    this.socket?.emit("toggleReaction", { messageId, emoji });
   }
 
-  sendFriendRequest(targetUserId: string): void {
-    this.socket?.emit('sendFriendRequest', { to: targetUserId });
+  sendFriendRequest(targetUserId: string): Promise<FriendRequest> {
+    return this.emitWithAck<FriendRequest>("sendFriendRequest", {
+      to: targetUserId,
+    });
   }
 
-  acceptFriendRequest(requestId: string): void {
-    this.socket?.emit('acceptFriendRequest', { requestId });
+  acceptFriendRequest(requestId: string): Promise<FriendRequest> {
+    return this.emitWithAck<FriendRequest>("acceptFriendRequest", {
+      requestId,
+    });
   }
 
-  declineFriendRequest(requestId: string): void {
-    this.socket?.emit('declineFriendRequest', { requestId });
+  declineFriendRequest(requestId: string): Promise<void> {
+    return this.emitWithAck<void>("declineFriendRequest", { requestId });
   }
 
-  emitRemoveFriend(friendId: string): void {
-    this.socket?.emit('removeFriend', { friendId });
+  emitRemoveFriend(friendId: string): Promise<void> {
+    return this.emitWithAck<void>("removeFriend", { friendId });
   }
 }
 

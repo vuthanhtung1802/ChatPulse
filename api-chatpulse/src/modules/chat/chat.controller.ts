@@ -13,11 +13,15 @@ import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
 import { AuthUser } from "../../shared/interfaces/auth-user.interface";
 import { CreateConversationDto } from "./dto/create-conversation.dto";
 import { PaginationDto } from "../../shared/dto/pagination.dto";
+import { ChatGateway } from "./chat.gateway";
 
 @Controller("conversations")
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @Post()
   async createConversation(
@@ -35,11 +39,16 @@ export class ChatController {
     const isGroup = createConversationDto.isGroup ?? false;
     const groupName = createConversationDto.groupName ?? "";
 
-    const conversation = await this.chatService.createConversation(
+    const created = await this.chatService.createConversation(
       participantIds,
       isGroup,
       groupName,
     );
+    const conversation = await this.chatService.getConversationById(
+      created._id.toString(),
+      user._id.toString(),
+    );
+    this.chatGateway.notifyConversationCreated(conversation);
 
     return { conversation };
   }
@@ -96,6 +105,7 @@ export class ChatController {
     @CurrentUser() user: AuthUser,
   ) {
     await this.chatService.deleteConversation(id, user._id.toString());
+    this.chatGateway.removeUserFromConversationRoom(user._id.toString(), id);
     return { success: true };
   }
 

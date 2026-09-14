@@ -1,23 +1,26 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { User } from '../../types/types';
-import { FriendItem, FriendRequest, RelationshipInfo } from '../../types/Friend';
-import { friendService } from './services/friend.service';
-import { socketService } from '../chat/services/socket.service';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { User } from "../../types/types";
+import {
+  FriendItem,
+  FriendRequest,
+  RelationshipInfo,
+} from "../../types/Friend";
+import { friendService } from "./services/friend.service";
+import { socketService } from "../chat/services/socket.service";
 
 function getOther(request: FriendRequest, myId: string): FriendItem | null {
   const requester =
-    typeof request.requester === 'object' ? request.requester : null;
+    typeof request.requester === "object" ? request.requester : null;
   const addressee =
-    typeof request.addressee === 'object' ? request.addressee : null;
-  const other =
-    requester && requester._id === myId ? addressee : requester;
+    typeof request.addressee === "object" ? request.addressee : null;
+  const other = requester && requester._id === myId ? addressee : requester;
   if (!other) return null;
   return {
     _id: other._id,
-    name: other.name ?? '',
-    email: other.email ?? '',
-    avatar: other.avatar ?? '',
-    status: other.status ?? 'offline',
+    name: other.name ?? "",
+    email: other.email ?? "",
+    avatar: other.avatar ?? "",
+    status: other.status ?? "offline",
     requestId: request._id,
     friendsSince: request.updatedAt ?? request.createdAt,
   };
@@ -43,9 +46,7 @@ export function useFriendsState(currentUser: User | null) {
         friendService.getIncomingRequests(),
         friendService.getSentRequests(),
       ]);
-      setFriends(
-        Array.isArray(friendsRes.friends) ? friendsRes.friends : [],
-      );
+      setFriends(Array.isArray(friendsRes.friends) ? friendsRes.friends : []);
 
       const incoming: FriendRequest[] = Array.isArray(incomingRes.requests)
         ? incomingRes.requests
@@ -58,25 +59,33 @@ export function useFriendsState(currentUser: User | null) {
 
       const rel: Record<string, RelationshipInfo> = {};
       for (const friend of friendsRes.friends as FriendItem[]) {
-        rel[friend._id] = { userId: friend._id, status: 'friends' };
+        rel[friend._id] = { userId: friend._id, status: "friends" };
       }
       for (const req of incoming) {
         const senderId =
-          typeof req.requester === 'object' ? req.requester._id : '';
+          typeof req.requester === "object" ? req.requester._id : "";
         if (senderId) {
-          rel[senderId] = { userId: senderId, status: 'received', requestId: req._id };
+          rel[senderId] = {
+            userId: senderId,
+            status: "received",
+            requestId: req._id,
+          };
         }
       }
       for (const req of sent) {
         const targetId =
-          typeof req.addressee === 'object' ? req.addressee._id : '';
+          typeof req.addressee === "object" ? req.addressee._id : "";
         if (targetId) {
-          rel[targetId] = { userId: targetId, status: 'sent' };
+          rel[targetId] = {
+            userId: targetId,
+            status: "sent",
+            requestId: req._id,
+          };
         }
       }
       setRelationships(rel);
     } catch (err) {
-      console.error('Failed to load friends data', err);
+      console.error("Failed to load friends data", err);
     }
   }, []);
 
@@ -100,11 +109,15 @@ export function useFriendsState(currentUser: User | null) {
         return [request, ...prev];
       });
       const senderId =
-        typeof request.requester === 'object' ? request.requester._id : '';
+        typeof request.requester === "object" ? request.requester._id : "";
       if (senderId) {
         setRelationships((prev) => ({
           ...prev,
-          [senderId]: { userId: senderId, status: 'received', requestId: request._id },
+          [senderId]: {
+            userId: senderId,
+            status: "received",
+            requestId: request._id,
+          },
         }));
       }
     };
@@ -118,22 +131,29 @@ export function useFriendsState(currentUser: User | null) {
       setFriends((prev) =>
         prev.some((f) => f._id === friend._id) ? prev : [friend, ...prev],
       );
-      setIncomingRequests((prev) =>
-        prev.filter((r) => r._id !== request._id),
-      );
+      setIncomingRequests((prev) => prev.filter((r) => r._id !== request._id));
       setSentRequests((prev) => prev.filter((r) => r._id !== request._id));
       setRelationships((prev) => ({
         ...prev,
-        [friend._id]: { userId: friend._id, status: 'friends' },
+        [friend._id]: { userId: friend._id, status: "friends" },
       }));
     };
 
-    const handleDeclined = ({ requestId }: { requestId: string }) => {
+    const handleDeclined = ({
+      requestId,
+      declinedBy,
+    }: {
+      requestId: string;
+      declinedBy: string;
+    }) => {
       setSentRequests((prev) => prev.filter((r) => r._id !== requestId));
       setRelationships((prev) => {
         const next = { ...prev };
         for (const [key, value] of Object.entries(next)) {
-          if (value.status === 'sent' && value.requestId === requestId) {
+          if (
+            value.status === "sent" &&
+            (value.requestId === requestId || key === declinedBy)
+          ) {
             delete next[key];
           }
         }
@@ -150,106 +170,127 @@ export function useFriendsState(currentUser: User | null) {
       });
     };
 
-    socketService.on('friendRequestReceived', handleReceived);
-    socketService.on('friendRequestAccepted', handleAccepted);
-    socketService.on('friendRequestDeclined', handleDeclined);
-    socketService.on('friendRemoved', handleRemoved);
+    socketService.on("friendRequestReceived", handleReceived);
+    socketService.on("friendRequestAccepted", handleAccepted);
+    socketService.on("friendRequestDeclined", handleDeclined);
+    socketService.on("friendRemoved", handleRemoved);
 
     return () => {
-      socketService.off('friendRequestReceived', handleReceived);
-      socketService.off('friendRequestAccepted', handleAccepted);
-      socketService.off('friendRequestDeclined', handleDeclined);
-      socketService.off('friendRemoved', handleRemoved);
+      socketService.off("friendRequestReceived", handleReceived);
+      socketService.off("friendRequestAccepted", handleAccepted);
+      socketService.off("friendRequestDeclined", handleDeclined);
+      socketService.off("friendRemoved", handleRemoved);
     };
   }, [currentUser]);
 
   // ---------- Actions ----------
 
-  const sendRequest = (targetUserId: string) => {
+  const sendRequest = async (targetUserId: string) => {
     const myId = currentUserIdRef.current;
     if (!myId) return;
 
-    const existingIncoming =
-      incomingRequestsRef.current.find(
-        (r) =>
-          typeof r.requester === 'object' && r.requester._id === targetUserId,
-      ) ?? null;
-
-    socketService.sendFriendRequest(targetUserId);
-
-    if (existingIncoming) {
-      // Backend auto-accepts mutual requests: treat as friends right away.
-      const friend = getOther(existingIncoming, myId);
-      if (friend) {
-        setFriends((prev) =>
-          prev.some((f) => f._id === friend._id) ? prev : [friend, ...prev],
-        );
-        setIncomingRequests((prev) =>
-          prev.filter((r) => r._id !== existingIncoming._id),
+    try {
+      const request = await socketService.sendFriendRequest(targetUserId);
+      if (request.status === "accepted") {
+        const friend = getOther(request, myId);
+        if (friend) {
+          setFriends((prev) =>
+            prev.some((item) => item._id === friend._id)
+              ? prev
+              : [friend, ...prev],
+          );
+          setIncomingRequests((prev) =>
+            prev.filter((item) => item._id !== request._id),
+          );
+          setRelationships((prev) => ({
+            ...prev,
+            [targetUserId]: { userId: targetUserId, status: "friends" },
+          }));
+        }
+      } else {
+        setSentRequests((prev) =>
+          prev.some((item) => item._id === request._id)
+            ? prev
+            : [request, ...prev],
         );
         setRelationships((prev) => ({
           ...prev,
-          [targetUserId]: { userId: targetUserId, status: 'friends' },
+          [targetUserId]: {
+            userId: targetUserId,
+            status: "sent",
+            requestId: request._id,
+          },
         }));
       }
-    } else {
-      setRelationships((prev) => ({
-        ...prev,
-        [targetUserId]: { userId: targetUserId, status: 'sent' },
-      }));
+    } catch (err) {
+      console.error("Failed to send friend request", err);
+      await loadAll();
     }
   };
 
-  const acceptRequest = (requestId: string) => {
+  const acceptRequest = async (requestId: string) => {
     const request = incomingRequestsRef.current.find(
       (r) => r._id === requestId,
     );
     const myId = currentUserIdRef.current;
-    socketService.acceptFriendRequest(requestId);
-
-    if (request && myId) {
-      const friend = getOther(request, myId);
-      if (friend) {
-        setFriends((prev) =>
-          prev.some((f) => f._id === friend._id) ? prev : [friend, ...prev],
-        );
-        setRelationships((prev) => ({
-          ...prev,
-          [friend._id]: { userId: friend._id, status: 'friends' },
-        }));
+    try {
+      await socketService.acceptFriendRequest(requestId);
+      if (request && myId) {
+        const friend = getOther(request, myId);
+        if (friend) {
+          setFriends((prev) =>
+            prev.some((f) => f._id === friend._id) ? prev : [friend, ...prev],
+          );
+          setRelationships((prev) => ({
+            ...prev,
+            [friend._id]: { userId: friend._id, status: "friends" },
+          }));
+        }
       }
+      setIncomingRequests((prev) => prev.filter((r) => r._id !== requestId));
+    } catch (err) {
+      console.error("Failed to accept friend request", err);
+      await loadAll();
     }
-    setIncomingRequests((prev) => prev.filter((r) => r._id !== requestId));
   };
 
-  const declineRequest = (requestId: string) => {
+  const declineRequest = async (requestId: string) => {
     const request = incomingRequestsRef.current.find(
       (r) => r._id === requestId,
     );
-    socketService.declineFriendRequest(requestId);
-
-    if (request) {
-      const senderId =
-        typeof request.requester === 'object' ? request.requester._id : '';
-      if (senderId) {
-        setRelationships((prev) => {
-          const next = { ...prev };
-          delete next[senderId];
-          return next;
-        });
+    try {
+      await socketService.declineFriendRequest(requestId);
+      if (request) {
+        const senderId =
+          typeof request.requester === "object" ? request.requester._id : "";
+        if (senderId) {
+          setRelationships((prev) => {
+            const next = { ...prev };
+            delete next[senderId];
+            return next;
+          });
+        }
       }
+      setIncomingRequests((prev) => prev.filter((r) => r._id !== requestId));
+    } catch (err) {
+      console.error("Failed to decline friend request", err);
+      await loadAll();
     }
-    setIncomingRequests((prev) => prev.filter((r) => r._id !== requestId));
   };
 
-  const removeFriend = (friendId: string) => {
-    socketService.emitRemoveFriend(friendId);
-    setFriends((prev) => prev.filter((f) => f._id !== friendId));
-    setRelationships((prev) => {
-      const next = { ...prev };
-      delete next[friendId];
-      return next;
-    });
+  const removeFriend = async (friendId: string) => {
+    try {
+      await socketService.emitRemoveFriend(friendId);
+      setFriends((prev) => prev.filter((f) => f._id !== friendId));
+      setRelationships((prev) => {
+        const next = { ...prev };
+        delete next[friendId];
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to remove friend", err);
+      await loadAll();
+    }
   };
 
   const incomingRequestsRef = useRef<FriendRequest[]>([]);

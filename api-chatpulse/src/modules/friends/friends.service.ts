@@ -104,6 +104,9 @@ export class FriendsService {
       throw new NotFoundException("Friend request not found");
     }
     this.assertAddressee(request, userId);
+    if (request.status !== "pending") {
+      throw new BadRequestException("Friend request is no longer pending");
+    }
     request.status = "accepted";
     return request.save();
   }
@@ -129,6 +132,9 @@ export class FriendsService {
       throw new NotFoundException("Friend request not found");
     }
     this.assertAddressee(request, userId);
+    if (request.status !== "pending") {
+      throw new BadRequestException("Friend request is no longer pending");
+    }
     request.status = "rejected";
     return request.save();
   }

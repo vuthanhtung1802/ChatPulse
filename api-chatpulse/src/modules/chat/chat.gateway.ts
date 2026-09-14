@@ -16,6 +16,8 @@ import { Server, Socket } from "socket.io";
 import { ChatService } from "./chat.service";
 import { UsersService } from "../users/users.service";
 import { FriendsService } from "../friends/friends.service";
+import { FriendRequestDocument } from "../friends/schemas/friend-request.schema";
+import { ConversationDocument } from "./schemas/conversation.schema";
 
 const userRoom = (userId: string) => `user:${userId}`;
 const conversationRoom = (conversationId: string) =>
@@ -34,6 +36,10 @@ interface TypingPayload {
   conversationId: string;
   isTyping: boolean;
 }
+
+type SocketAck<T = undefined> = (
+  response: { ok: true; data?: T } | { ok: false; error: string },
+) => void;
 
 @WebSocketGateway({
   cors: {
@@ -59,6 +65,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
+
+  notifyConversationCreated(conversation: ConversationDocument): void {
+    const room = conversationRoom(conversation._id.toString());
+    for (const participant of conversation.participants) {
+      const populatedId = (participant as unknown as { _id?: unknown })._id;
+      const participantId = String(populatedId ?? participant);
+      this.server.in(userRoom(participantId)).socketsJoin(room);
+      this.server
+        .to(userRoom(participantId))
+        .emit("conversationCreated", { conversation });
+    }
+  }
+
+  removeUserFromConversationRoom(userId: string, conversationId: string): void {
+    this.server
+      .in(userRoom(userId))
+      .socketsLeave(conversationRoom(conversationId));
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : "Request failed";
+  }
 
   async handleConnection(client: Socket): Promise<void> {
     try {
@@ -174,7 +202,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     userId: string,
     payload: TypingPayload,
   ): Promise<void> {
-    if (!(await this.chatService.hasParticipant(payload.conversationId, userId))) {
+    if (
+      !(await this.chatService.hasParticipant(payload.conversationId, userId))
+    ) {
       throw new WsException("You are not a participant of this conversation");
     }
     client.to(conversationRoom(payload.conversationId)).emit("typing", {
@@ -249,77 +279,92 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleSendFriendRequest(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { to: string },
+    @Ack() acknowledge?: SocketAck<FriendRequestDocument>,
   ): Promise<void> {
-    const userId = client.data.userId as string;
-
-    const request = await this.friendsService.sendRequest(userId, payload.to);
-    const populated = await this.friendsService.findRequestById(
-      request._id.toString(),
-    );
-
-    // Mutual accept (the target already sent us a pending request).
-    if (populated.status === "accepted") {
-      this.server
-        .to(userRoom(payload.to))
-        .emit("friendRequestAccepted", { request: populated });
-      return;
+    try {
+      const userId = client.data.userId as string;
+      const request = await this.friendsService.sendRequest(userId, payload.to);
+      const populated = await this.friendsService.findRequestById(
+        request._id.toString(),
+      );
+      if (populated.status === "accepted") {
+        this.server
+          .to(userRoom(payload.to))
+          .emit("friendRequestAccepted", { request: populated });
+      } else {
+        this.server
+          .to(userRoom(payload.to))
+          .emit("friendRequestReceived", { request: populated });
+      }
+      acknowledge?.({ ok: true, data: populated });
+    } catch (error) {
+      acknowledge?.({ ok: false, error: this.errorMessage(error) });
     }
-
-    this.server
-      .to(userRoom(payload.to))
-      .emit("friendRequestReceived", { request: populated });
   }
 
   @SubscribeMessage("acceptFriendRequest")
   async handleAcceptFriendRequest(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { requestId: string },
+    @Ack() acknowledge?: SocketAck<FriendRequestDocument>,
   ): Promise<void> {
-    const userId = client.data.userId as string;
-
-    const request = await this.friendsService.acceptRequest(
-      payload.requestId,
-      userId,
-    );
-    const populated = await this.friendsService.findRequestById(
-      request._id.toString(),
-    );
-
-    this.server
-      .to(userRoom(request.requester.toString()))
-      .emit("friendRequestAccepted", { request: populated });
+    try {
+      const userId = client.data.userId as string;
+      const request = await this.friendsService.acceptRequest(
+        payload.requestId,
+        userId,
+      );
+      const populated = await this.friendsService.findRequestById(
+        request._id.toString(),
+      );
+      this.server
+        .to(userRoom(request.requester.toString()))
+        .emit("friendRequestAccepted", { request: populated });
+      acknowledge?.({ ok: true, data: populated });
+    } catch (error) {
+      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+    }
   }
 
   @SubscribeMessage("declineFriendRequest")
   async handleDeclineFriendRequest(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { requestId: string },
+    @Ack() acknowledge?: SocketAck,
   ): Promise<void> {
-    const userId = client.data.userId as string;
-
-    const request = await this.friendsService.declineRequest(
-      payload.requestId,
-      userId,
-    );
-
-    this.server
-      .to(userRoom(request.requester.toString()))
-      .emit("friendRequestDeclined", {
-        requestId: request._id.toString(),
-        declinedBy: userId,
-      });
+    try {
+      const userId = client.data.userId as string;
+      const request = await this.friendsService.declineRequest(
+        payload.requestId,
+        userId,
+      );
+      this.server
+        .to(userRoom(request.requester.toString()))
+        .emit("friendRequestDeclined", {
+          requestId: request._id.toString(),
+          declinedBy: userId,
+        });
+      acknowledge?.({ ok: true });
+    } catch (error) {
+      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+    }
   }
 
   @SubscribeMessage("removeFriend")
   async handleRemoveFriend(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { friendId: string },
+    @Ack() acknowledge?: SocketAck,
   ): Promise<void> {
-    const userId = client.data.userId as string;
-    await this.friendsService.removeFriend(userId, payload.friendId);
-
-    this.server
-      .to(userRoom(payload.friendId))
-      .emit("friendRemoved", { by: userId });
+    try {
+      const userId = client.data.userId as string;
+      await this.friendsService.removeFriend(userId, payload.friendId);
+      this.server
+        .to(userRoom(payload.friendId))
+        .emit("friendRemoved", { by: userId });
+      acknowledge?.({ ok: true });
+    } catch (error) {
+      acknowledge?.({ ok: false, error: this.errorMessage(error) });
+    }
   }
 }
