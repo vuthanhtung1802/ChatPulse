@@ -6,6 +6,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { PostsModule } from "./modules/posts/posts.module";
+import { FriendsModule } from "./modules/friends/friends.module";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PostsModule } from "./modules/posts/posts.module";
     UsersModule,
     ChatModule,
     PostsModule,
+    FriendsModule,
   ],
   controllers: [AppController],
 })

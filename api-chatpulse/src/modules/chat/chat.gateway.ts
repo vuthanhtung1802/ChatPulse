@@ -14,6 +14,7 @@ import { ConfigService } from "@nestjs/config";
 import { Server, Socket } from "socket.io";
 import { ChatService } from "./chat.service";
 import { UsersService } from "../users/users.service";
+import { FriendsService } from "../friends/friends.service";
 
 const userRoom = (userId: string) => `user:${userId}`;
 const conversationRoom = (conversationId: string) =>
@@ -51,6 +52,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatService: ChatService,
     private readonly usersService: UsersService,
+    private readonly friendsService: FriendsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -204,5 +206,83 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         conversationId: message.conversationId.toString(),
         messageId: message._id.toString(),
       });
+  }
+
+  @SubscribeMessage("sendFriendRequest")
+  async handleSendFriendRequest(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { to: string },
+  ): Promise<void> {
+    const userId = client.data.userId as string;
+
+    const request = await this.friendsService.sendRequest(userId, payload.to);
+    const populated = await this.friendsService.findRequestById(
+      request._id.toString(),
+    );
+
+    // Mutual accept (the target already sent us a pending request).
+    if (populated.status === "accepted") {
+      this.server
+        .to(userRoom(payload.to))
+        .emit("friendRequestAccepted", { request: populated });
+      return;
+    }
+
+    this.server
+      .to(userRoom(payload.to))
+      .emit("friendRequestReceived", { request: populated });
+  }
+
+  @SubscribeMessage("acceptFriendRequest")
+  async handleAcceptFriendRequest(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { requestId: string },
+  ): Promise<void> {
+    const userId = client.data.userId as string;
+
+    const request = await this.friendsService.acceptRequest(
+      payload.requestId,
+      userId,
+    );
+    const populated = await this.friendsService.findRequestById(
+      request._id.toString(),
+    );
+
+    this.server
+      .to(userRoom(request.requester.toString()))
+      .emit("friendRequestAccepted", { request: populated });
+  }
+
+  @SubscribeMessage("declineFriendRequest")
+  async handleDeclineFriendRequest(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { requestId: string },
+  ): Promise<void> {
+    const userId = client.data.userId as string;
+
+    const request = await this.friendsService.declineRequest(
+      payload.requestId,
+      userId,
+    );
+
+    this.server
+      .to(userRoom(request.requester.toString()))
+      .emit("friendRequestDeclined", {
+        requestId: request._id.toString(),
+        declinedBy: userId,
+      });
+  }
+
+  @SubscribeMessage("removeFriend")
+  async handleRemoveFriend(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { friendId: string },
+  ): Promise<void> {
+    const userId = client.data.userId as string;
+    await this.friendsService.removeFriend(userId, payload.friendId);
+
+    this.server
+      .to(userRoom(payload.friendId))
+      .emit("friendRemoved", { by: userId });
   }
 }

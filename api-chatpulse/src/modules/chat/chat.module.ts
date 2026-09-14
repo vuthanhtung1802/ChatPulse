@@ -10,6 +10,7 @@ import {
 import { Message, MessageSchema } from "./schemas/message.schema";
 import { AuthModule } from "../auth/auth.module";
 import { UsersModule } from "../users/users.module";
+import { FriendsModule } from "../friends/friends.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from "../users/users.module";
     ]),
     AuthModule,
     UsersModule,
+    FriendsModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],
