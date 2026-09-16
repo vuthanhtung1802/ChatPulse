@@ -2,9 +2,12 @@ import { ChatGateway } from "./chat.gateway";
 
 describe("ChatGateway conversation rooms", () => {
   const createGateway = () => {
+    const usersService = {
+      resetAllStatuses: jest.fn().mockResolvedValue(undefined),
+    };
     const gateway = new ChatGateway(
       {} as never,
-      {} as never,
+      usersService as never,
       {} as never,
       {} as never,
       {} as never,
@@ -16,8 +19,16 @@ describe("ChatGateway conversation rooms", () => {
       in: jest.fn(() => ({ socketsJoin, socketsLeave })),
       to: jest.fn(() => ({ emit })),
     } as never;
-    return { gateway, socketsJoin, socketsLeave, emit };
+    return { gateway, usersService, socketsJoin, socketsLeave, emit };
   };
+
+  it("clears stale online statuses when the server starts", async () => {
+    const { gateway, usersService } = createGateway();
+
+    await gateway.onApplicationBootstrap();
+
+    expect(usersService.resetAllStatuses).toHaveBeenCalledTimes(1);
+  });
 
   it("joins every participant socket and announces a new conversation", () => {
     const { gateway, socketsJoin, emit } = createGateway();

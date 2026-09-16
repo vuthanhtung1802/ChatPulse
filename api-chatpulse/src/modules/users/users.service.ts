@@ -160,6 +160,13 @@ export class UsersService {
     return user;
   }
 
+  async resetAllStatuses(): Promise<void> {
+    await this.userModel.updateMany(
+      { status: { $ne: "offline" } },
+      { $set: { status: "offline" } },
+    );
+  }
+
   async updateUserStatus(
     id: string,
     status: string,

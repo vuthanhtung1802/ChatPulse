@@ -9,7 +9,11 @@ import {
   WebSocketServer,
   WsException,
 } from "@nestjs/websockets";
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { Server, Socket } from "socket.io";
@@ -36,7 +40,12 @@ import { parseCorsOrigins } from "../../config/environment";
   },
 })
 @Injectable()
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnApplicationBootstrap
+{
   private readonly logger = new Logger(ChatGateway.name);
 
   // Track how many socket connections a user currently holds (multi-tab).
@@ -53,6 +62,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    await this.usersService.resetAllStatuses();
+  }
 
   notifyConversationCreated(conversation: ConversationDocument): void {
     const room = conversationRoom(conversation._id.toString());
