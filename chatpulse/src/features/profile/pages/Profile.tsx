@@ -188,9 +188,9 @@ export const Profile: React.FC = () => {
             <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.34),transparent_28%),linear-gradient(120deg,var(--color-primary),var(--color-secondary))]" />
             <div className="absolute -right-16 top-3 h-48 w-48 rounded-full border-[28px] border-white/10" />
             <div className="absolute right-28 top-16 h-20 w-20 rounded-full bg-white/10 blur-sm" />
-            <div className="relative px-5 pb-6 pt-24 sm:px-8 sm:pt-20">
-              <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-end">
-                <div className="relative shrink-0">
+            <div className="relative mt-40 px-5 pb-6 sm:px-8">
+              <div className="flex flex-col items-start sm:flex-row sm:items-start">
+                <div className="relative -mt-16 shrink-0">
                   <div className="h-28 w-28 overflow-hidden rounded-3xl border-4 border-surface-container-lowest bg-surface-container shadow-xl sm:h-32 sm:w-32">
                     <img
                       src={currentUser.avatar}
@@ -221,32 +221,33 @@ export const Profile: React.FC = () => {
                     className="hidden"
                   />
                 </div>
-                <div className="min-w-0 flex-1 pb-1">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h2 className="font-display text-2xl font-bold tracking-tight text-on-surface sm:text-3xl">
+                <div className="mt-4 min-w-0 flex-1 sm:ml-6 sm:mt-5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                    <h2 className="max-w-full break-words font-display text-2xl font-extrabold leading-tight tracking-tight text-on-surface sm:text-3xl">
                       {currentUser.name}
                     </h2>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-primary-container">
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-container px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-primary-container">
                       <Award size={12} /> {currentUser.plan}
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-on-surface-variant">
-                    <span className="inline-flex items-center gap-1.5 font-medium text-secondary">
+                  <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-xs text-on-surface-variant">
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary-container/60 px-2.5 py-1 font-semibold text-secondary">
                       <span className="relative flex h-2.5 w-2.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary opacity-50" />
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-secondary" />
                       </span>
                       Active now
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Mail size={13} /> {currentUser.email}
+                    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-surface-container-low px-2.5 py-1">
+                      <Mail size={13} className="shrink-0" />
+                      <span className="truncate">{currentUser.email}</span>
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleOpenEdit}
-                  className="hidden items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-xs font-semibold text-on-surface shadow-xs transition-colors hover:bg-surface-container-low sm:flex"
+                  className="mt-5 hidden shrink-0 items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-xs font-semibold text-on-surface shadow-xs transition-colors hover:bg-surface-container-low sm:ml-5 sm:flex"
                 >
                   <Edit3 size={14} /> Edit details
                 </button>
