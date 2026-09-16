@@ -141,8 +141,26 @@ export class FriendsService {
   }
 
   async removeFriend(userId: string, friendId: string): Promise<void> {
+    if (userId === friendId) {
+      throw new BadRequestException("You cannot remove yourself");
+    }
+
     const userObjectId = new Types.ObjectId(userId);
     const friendObjectId = new Types.ObjectId(friendId);
+
+    const friendship = await this.friendRequestModel
+      .findOne({
+        status: "accepted",
+        $or: [
+          { requester: userObjectId, addressee: friendObjectId },
+          { requester: friendObjectId, addressee: userObjectId },
+        ],
+      })
+      .exec();
+
+    if (!friendship) {
+      throw new BadRequestException("You are not friends with this user");
+    }
 
     await this.friendRequestModel.deleteMany({
       $or: [

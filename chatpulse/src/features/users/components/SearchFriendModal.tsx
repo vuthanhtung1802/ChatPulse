@@ -9,6 +9,8 @@ import {
   MessageSquare,
   UserMinus,
   Users,
+  LoaderCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { useChat } from "../../chat/ChatContext";
 import { useAuth } from "../../auth/AuthContext";
@@ -44,6 +46,12 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
   );
   const [groupName, setGroupName] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [friendToRemove, setFriendToRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isRemovingFriend, setIsRemovingFriend] = useState(false);
+  const [removeFriendError, setRemoveFriendError] = useState("");
   const { searchTerm, setSearchTerm, users, isLoading, getRelationship } =
     useUserSearch({
       enabled: isOpen,
@@ -56,6 +64,8 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
       setActiveTab("search");
       setGroupName("");
       setSelectedFriends([]);
+      setFriendToRemove(null);
+      setRemoveFriendError("");
       return;
     }
   }, [isOpen]);
@@ -76,8 +86,23 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
     sendRequest(id);
   };
 
-  const handleUnfriend = (id: string) => {
-    removeFriend(id);
+  const handleUnfriend = (id: string, name: string) => {
+    setRemoveFriendError("");
+    setFriendToRemove({ id, name });
+  };
+
+  const handleConfirmUnfriend = async () => {
+    if (!friendToRemove) return;
+    setIsRemovingFriend(true);
+    setRemoveFriendError("");
+    try {
+      await removeFriend(friendToRemove.id);
+      setFriendToRemove(null);
+    } catch {
+      setRemoveFriendError("Could not remove this friend. Please try again.");
+    } finally {
+      setIsRemovingFriend(false);
+    }
   };
 
   const settleRequest = (
@@ -284,7 +309,7 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <button
-                    onClick={() => handleUnfriend(friend._id)}
+                    onClick={() => handleUnfriend(friend._id, friend.name)}
                     title="Unfriend"
                     className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer"
                   >
@@ -401,7 +426,12 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
                           {status === "friends" && (
                             <>
                               <button
-                                onClick={() => handleUnfriend(userId)}
+                                onClick={() =>
+                                  handleUnfriend(
+                                    userId,
+                                    user.name || "this user",
+                                  )
+                                }
                                 title="Unfriend"
                                 className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer"
                               >
@@ -479,6 +509,74 @@ export const SearchFriendModal: React.FC<SearchFriendModalProps> = ({
           )}
         </div>
       </div>
+
+      {friendToRemove && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-friend-title"
+          >
+            <div className="flex items-start justify-between px-5 pb-3 pt-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-error-container text-error">
+                <AlertTriangle size={21} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setFriendToRemove(null)}
+                disabled={isRemovingFriend}
+                className="rounded-xl p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface disabled:opacity-50"
+                aria-label="Close confirmation"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 pb-5">
+              <h3
+                id="remove-friend-title"
+                className="font-display text-lg font-bold text-on-surface"
+              >
+                Remove {friendToRemove.name}?
+              </h3>
+              <p className="mt-2 text-sm leading-5 text-on-surface-variant">
+                You will no longer appear in each other&apos;s friend list. Your
+                existing conversation will remain available.
+              </p>
+              {removeFriendError && (
+                <p className="mt-3 rounded-xl bg-error-container px-3 py-2 text-xs font-medium text-on-error-container">
+                  {removeFriendError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-outline-variant/60 bg-surface-container-low/60 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setFriendToRemove(null)}
+                disabled={isRemovingFriend}
+                className="flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmUnfriend}
+                disabled={isRemovingFriend}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-error px-4 py-2.5 text-sm font-semibold text-on-error transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {isRemovingFriend ? (
+                  <LoaderCircle size={15} className="animate-spin" />
+                ) : (
+                  <UserMinus size={15} />
+                )}
+                {isRemovingFriend ? "Removing..." : "Remove friend"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

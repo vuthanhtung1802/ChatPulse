@@ -249,6 +249,7 @@ export function useFriendsState(currentUser: User | null) {
     } catch (err) {
       console.error("Failed to remove friend", err);
       await loadAll();
+      throw err;
     }
   };
 

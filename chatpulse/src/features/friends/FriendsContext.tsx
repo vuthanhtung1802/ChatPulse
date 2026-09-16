@@ -16,7 +16,7 @@ interface FriendsContextValue {
   sendRequest: (targetUserId: string) => void;
   acceptRequest: (requestId: string) => void;
   declineRequest: (requestId: string) => void;
-  removeFriend: (friendId: string) => void;
+  removeFriend: (friendId: string) => Promise<void>;
 }
 
 const FriendsContext = createContext<FriendsContextValue | undefined>(

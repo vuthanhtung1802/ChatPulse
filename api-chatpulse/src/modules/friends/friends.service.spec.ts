@@ -39,4 +39,35 @@ describe("FriendsService request transitions", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(request.save).not.toHaveBeenCalled();
   });
+
+  it("removes an accepted friendship in either direction", async () => {
+    const exec = jest.fn().mockResolvedValue({ _id: "friendship-id" });
+    const model = {
+      findOne: jest.fn().mockReturnValue({ exec }),
+      deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    };
+    const service = new FriendsService(model as never, {} as never);
+
+    await service.removeFriend(userId, requesterId);
+
+    expect(model.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "accepted" }),
+    );
+    expect(model.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects removing a user who is not a friend", async () => {
+    const model = {
+      findOne: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      }),
+      deleteMany: jest.fn(),
+    };
+    const service = new FriendsService(model as never, {} as never);
+
+    await expect(service.removeFriend(userId, requesterId)).rejects.toThrow(
+      "You are not friends with this user",
+    );
+    expect(model.deleteMany).not.toHaveBeenCalled();
+  });
 });
