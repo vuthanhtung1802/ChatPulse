@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NotificationItem } from "../../types/Notification";
 import { useFriends } from "../friends/FriendsContext";
 import { useAuth } from "../auth/AuthContext";
 import { socketService } from "../chat/services/socket.service";
 import { FriendRequest } from "../../types/Friend";
+import { ApiMessage, ApiUser } from "../../types/Api";
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -21,6 +22,11 @@ export function useNotificationsState() {
     NotificationItem[]
   >([]);
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
+  const [messageToast, setMessageToast] = useState<NotificationItem | null>(
+    null,
+  );
+  const messageIdsRef = useRef(new Set<string>());
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -60,11 +66,72 @@ export function useNotificationsState() {
       });
     };
 
+    const handleMessageReceived = (message: ApiMessage) => {
+      const sender =
+        typeof message.sender === "object" ? (message.sender as ApiUser) : null;
+      const senderId = sender?._id ?? sender?.id ?? String(message.sender);
+      const conversationId = message.conversationId?.toString();
+
+      if (
+        senderId === currentUser.id ||
+        !conversationId ||
+        messageIdsRef.current.has(message._id)
+      ) {
+        return;
+      }
+
+      messageIdsRef.current.add(message._id);
+      const senderName = sender?.name || "Someone";
+      const messageText = message.content?.trim();
+      const attachmentLabel =
+        message.attachmentType === "image"
+          ? "sent you a photo"
+          : message.attachmentType === "video"
+            ? "sent you a video"
+            : "sent you a message";
+      const notification: NotificationItem = {
+        id: `message-${message._id}`,
+        title: `New message from ${senderName}`,
+        description: messageText
+          ? messageText.length > 90
+            ? `${messageText.slice(0, 90)}…`
+            : messageText
+          : `${senderName} ${attachmentLabel}.`,
+        time: formatTime(message.createdAt),
+        type: "message",
+        unread: true,
+        senderId,
+        conversationId,
+      };
+
+      setLocalNotifications((previous) => [notification, ...previous]);
+      setMessageToast(notification);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setMessageToast(null), 5000);
+    };
+
     socketService.on("friendRequestAccepted", handleAccepted);
+    socketService.on("messageReceived", handleMessageReceived);
     return () => {
       socketService.off("friendRequestAccepted", handleAccepted);
+      socketService.off("messageReceived", handleMessageReceived);
     };
   }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) return;
+    setLocalNotifications([]);
+    setMessageToast(null);
+    messageIdsRef.current.clear();
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, [currentUser]);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    [],
+  );
 
   const friendNotifications: NotificationItem[] = incomingRequests
     .filter((req) => !dismissedIds[req._id])
@@ -90,6 +157,13 @@ export function useNotificationsState() {
 
   const removeNotification = (id: string) => {
     setDismissedIds((prev) => ({ ...prev, [id]: true }));
+    setLocalNotifications((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const markNotificationAsRead = (id: string) => {
+    setLocalNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
+    );
   };
 
   return {
@@ -97,5 +171,8 @@ export function useNotificationsState() {
     setNotifications: setLocalNotifications,
     markNotificationsAsRead,
     removeNotification,
+    markNotificationAsRead,
+    messageToast,
+    dismissMessageToast: () => setMessageToast(null),
   };
 }

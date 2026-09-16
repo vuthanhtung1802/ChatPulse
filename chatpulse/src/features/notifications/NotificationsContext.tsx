@@ -5,7 +5,10 @@ import { useNotificationsState } from "./useNotifications";
 interface NotificationsContextValue {
   notifications: NotificationItem[];
   markNotificationsAsRead: () => void;
+  markNotificationAsRead: (id: string) => void;
   removeNotification: (id: string) => void;
+  messageToast: NotificationItem | null;
+  dismissMessageToast: () => void;
 }
 
 const NotificationsContext = createContext<

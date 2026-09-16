@@ -7,4 +7,5 @@ export interface NotificationItem {
   unread: boolean;
   requestId?: string;
   senderId?: string;
+  conversationId?: string;
 }

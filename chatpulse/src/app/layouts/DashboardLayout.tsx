@@ -1,12 +1,27 @@
 import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { SideNavBar } from "../../components/layout/SideNavBar";
 import { SearchFriendModal } from "../../features/users/components/SearchFriendModal";
+import { MessageNotificationToast } from "../../features/notifications/components/MessageNotificationToast";
+import { useNotifications } from "../../features/notifications/NotificationsContext";
+import { useChat } from "../../features/chat/ChatContext";
 
 // Protected layout: sidebar + animated page outlet + global modals.
 export const DashboardLayout: React.FC = () => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const navigate = useNavigate();
+  const { messageToast, dismissMessageToast, markNotificationAsRead } =
+    useNotifications();
+  const { setActiveConversationId } = useChat();
+
+  const openMessageNotification = () => {
+    if (!messageToast?.conversationId) return;
+    setActiveConversationId(messageToast.conversationId);
+    markNotificationAsRead(messageToast.id);
+    dismissMessageToast();
+    navigate("/messages");
+  };
 
   return (
     <div className="w-full h-full flex overflow-hidden bg-background">
@@ -30,6 +45,12 @@ export const DashboardLayout: React.FC = () => {
       <SearchFriendModal
         isOpen={isNewChatOpen}
         onClose={() => setIsNewChatOpen(false)}
+      />
+
+      <MessageNotificationToast
+        notification={messageToast}
+        onOpen={openMessageNotification}
+        onDismiss={dismissMessageToast}
       />
     </div>
   );
