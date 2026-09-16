@@ -19,6 +19,7 @@ export type SocketEvent =
   | "friendRequestAccepted"
   | "friendRequestDeclined"
   | "friendRemoved"
+  | "friendPostCreated"
   | "connect"
   | "disconnect";
 

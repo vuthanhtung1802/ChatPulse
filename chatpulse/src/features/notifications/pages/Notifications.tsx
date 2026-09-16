@@ -14,6 +14,7 @@ import {
   UserCheck,
   UserX,
   X,
+  Newspaper,
 } from "lucide-react";
 import { NotificationItem } from "../../../types/Notification";
 import { useChat } from "../../chat/ChatContext";
@@ -41,6 +42,8 @@ export const Notifications: React.FC = () => {
     switch (type) {
       case "message":
         return <MessageSquare size={16} className="text-primary" />;
+      case "post":
+        return <Newspaper size={16} className="text-secondary" />;
       case "like":
         return <Heart size={16} className="text-error" fill="currentColor" />;
       case "mention":
@@ -69,6 +72,11 @@ export const Notifications: React.FC = () => {
     setActiveConversationId(notification.conversationId);
     markNotificationAsRead(notification.id);
     navigate("/messages");
+  };
+
+  const handleOpenPost = (notification: NotificationItem) => {
+    markNotificationAsRead(notification.id);
+    navigate("/");
   };
 
   const handleConfirmDelete = () => {
@@ -146,6 +154,17 @@ export const Notifications: React.FC = () => {
                       >
                         <MessageSquare size={12} />
                         Open conversation
+                      </button>
+                    )}
+
+                    {notif.type === "post" && notif.postId && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPost(notif)}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-secondary-container px-3 py-1.5 text-[11px] font-semibold text-on-secondary-container transition-colors hover:bg-secondary hover:text-on-secondary"
+                      >
+                        <Newspaper size={12} />
+                        View post
                       </button>
                     )}
 

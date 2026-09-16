@@ -1,16 +1,16 @@
 import React from "react";
-import { MessageSquare, X } from "lucide-react";
+import { MessageSquare, Newspaper, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { NotificationItem } from "../../../types/Notification";
 
-interface MessageNotificationToastProps {
+interface RealtimeNotificationToastProps {
   notification: NotificationItem | null;
   onOpen: (notification: NotificationItem) => void;
   onDismiss: () => void;
 }
 
-export const MessageNotificationToast: React.FC<
-  MessageNotificationToastProps
+export const RealtimeNotificationToast: React.FC<
+  RealtimeNotificationToastProps
 > = ({ notification, onOpen, onDismiss }) => (
   <AnimatePresence>
     {notification && (
@@ -30,7 +30,11 @@ export const MessageNotificationToast: React.FC<
             className="flex min-w-0 flex-1 items-start gap-3 text-left"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-container text-primary">
-              <MessageSquare size={18} />
+              {notification.type === "post" ? (
+                <Newspaper size={18} />
+              ) : (
+                <MessageSquare size={18} />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold text-on-surface">
@@ -40,7 +44,9 @@ export const MessageNotificationToast: React.FC<
                 {notification.description}
               </span>
               <span className="mt-2 block text-[10px] font-semibold text-primary">
-                Open conversation
+                {notification.type === "post"
+                  ? "View post"
+                  : "Open conversation"}
               </span>
             </span>
           </button>

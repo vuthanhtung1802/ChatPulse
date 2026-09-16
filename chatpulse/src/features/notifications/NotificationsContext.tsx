@@ -7,8 +7,8 @@ interface NotificationsContextValue {
   markNotificationsAsRead: () => void;
   markNotificationAsRead: (id: string) => void;
   removeNotification: (id: string) => void;
-  messageToast: NotificationItem | null;
-  dismissMessageToast: () => void;
+  notificationToast: NotificationItem | null;
+  dismissNotificationToast: () => void;
 }
 
 const NotificationsContext = createContext<

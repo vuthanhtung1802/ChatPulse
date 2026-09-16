@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { SideNavBar } from "../../components/layout/SideNavBar";
 import { SearchFriendModal } from "../../features/users/components/SearchFriendModal";
-import { MessageNotificationToast } from "../../features/notifications/components/MessageNotificationToast";
+import { RealtimeNotificationToast } from "../../features/notifications/components/RealtimeNotificationToast";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
 import { useChat } from "../../features/chat/ChatContext";
 
@@ -11,16 +11,24 @@ import { useChat } from "../../features/chat/ChatContext";
 export const DashboardLayout: React.FC = () => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const navigate = useNavigate();
-  const { messageToast, dismissMessageToast, markNotificationAsRead } =
-    useNotifications();
+  const {
+    notificationToast,
+    dismissNotificationToast,
+    markNotificationAsRead,
+  } = useNotifications();
   const { setActiveConversationId } = useChat();
 
-  const openMessageNotification = () => {
-    if (!messageToast?.conversationId) return;
-    setActiveConversationId(messageToast.conversationId);
-    markNotificationAsRead(messageToast.id);
-    dismissMessageToast();
-    navigate("/messages");
+  const openRealtimeNotification = () => {
+    if (!notificationToast) return;
+    markNotificationAsRead(notificationToast.id);
+    dismissNotificationToast();
+    if (notificationToast.type === "message") {
+      if (!notificationToast.conversationId) return;
+      setActiveConversationId(notificationToast.conversationId);
+      navigate("/messages");
+      return;
+    }
+    navigate("/");
   };
 
   return (
@@ -47,10 +55,10 @@ export const DashboardLayout: React.FC = () => {
         onClose={() => setIsNewChatOpen(false)}
       />
 
-      <MessageNotificationToast
-        notification={messageToast}
-        onOpen={openMessageNotification}
-        onDismiss={dismissMessageToast}
+      <RealtimeNotificationToast
+        notification={notificationToast}
+        onOpen={openRealtimeNotification}
+        onDismiss={dismissNotificationToast}
       />
     </div>
   );

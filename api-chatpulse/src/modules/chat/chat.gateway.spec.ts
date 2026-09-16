@@ -30,6 +30,18 @@ describe("ChatGateway conversation rooms", () => {
     expect(usersService.resetAllStatuses).toHaveBeenCalledTimes(1);
   });
 
+  it("notifies every friend when a post is created", () => {
+    const { gateway, emit } = createGateway();
+    const post = { _id: "post-id", content: "Hello friends" };
+
+    gateway.notifyFriendsOfPost(["user-a", "user-b"], post);
+
+    expect(gateway.server.to).toHaveBeenNthCalledWith(1, "user:user-a");
+    expect(gateway.server.to).toHaveBeenNthCalledWith(2, "user:user-b");
+    expect(emit).toHaveBeenCalledTimes(2);
+    expect(emit).toHaveBeenCalledWith("friendPostCreated", { post });
+  });
+
   it("joins every participant socket and announces a new conversation", () => {
     const { gateway, socketsJoin, emit } = createGateway();
     const conversation = {

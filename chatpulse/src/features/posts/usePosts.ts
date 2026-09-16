@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Post, User } from "../../types/types";
 import { postService } from "./services/posts.service";
+import { socketService } from "../chat/services/socket.service";
 
 export function usePostsState(currentUser: User | null) {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -22,6 +23,24 @@ export function usePostsState(currentUser: User | null) {
       }
     };
     fetchPosts();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const handleFriendPostCreated = ({ post }: { post: Post }) => {
+      if (post.author?._id === currentUser.id) return;
+      setPosts((previous) =>
+        previous.some((item) => item._id === post._id)
+          ? previous
+          : [post, ...previous],
+      );
+    };
+
+    socketService.on("friendPostCreated", handleFriendPostCreated);
+    return () => {
+      socketService.off("friendPostCreated", handleFriendPostCreated);
+    };
   }, [currentUser]);
 
   const toggleLikePost = async (postId: string) => {

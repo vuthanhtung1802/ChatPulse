@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { socketService } from "../chat/services/socket.service";
 import { FriendRequest } from "../../types/Friend";
 import { ApiMessage, ApiUser } from "../../types/Api";
+import { Post } from "../../types/Post";
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -22,9 +23,8 @@ export function useNotificationsState() {
     NotificationItem[]
   >([]);
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
-  const [messageToast, setMessageToast] = useState<NotificationItem | null>(
-    null,
-  );
+  const [notificationToast, setNotificationToast] =
+    useState<NotificationItem | null>(null);
   const messageIdsRef = useRef(new Set<string>());
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -105,23 +105,70 @@ export function useNotificationsState() {
       };
 
       setLocalNotifications((previous) => [notification, ...previous]);
-      setMessageToast(notification);
+      setNotificationToast(notification);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => setMessageToast(null), 5000);
+      toastTimerRef.current = setTimeout(
+        () => setNotificationToast(null),
+        5000,
+      );
+    };
+
+    const handleFriendPostCreated = ({ post }: { post: Post }) => {
+      const authorId = post.author?._id;
+      const dedupeId = `post-${post._id}`;
+      if (
+        !post._id ||
+        !authorId ||
+        authorId === currentUser.id ||
+        messageIdsRef.current.has(dedupeId)
+      ) {
+        return;
+      }
+
+      messageIdsRef.current.add(dedupeId);
+      const authorName = post.author.name || "A friend";
+      const content = post.content?.trim();
+      const description = content
+        ? content.length > 90
+          ? `${content.slice(0, 90)}…`
+          : content
+        : post.images?.length
+          ? `Shared ${post.images.length} new photo${post.images.length > 1 ? "s" : ""}.`
+          : "Shared a new post.";
+      const notification: NotificationItem = {
+        id: dedupeId,
+        title: `${authorName} shared a new post`,
+        description,
+        time: formatTime(post.createdAt),
+        type: "post",
+        unread: true,
+        senderId: authorId,
+        postId: post._id,
+      };
+
+      setLocalNotifications((previous) => [notification, ...previous]);
+      setNotificationToast(notification);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(
+        () => setNotificationToast(null),
+        5000,
+      );
     };
 
     socketService.on("friendRequestAccepted", handleAccepted);
     socketService.on("messageReceived", handleMessageReceived);
+    socketService.on("friendPostCreated", handleFriendPostCreated);
     return () => {
       socketService.off("friendRequestAccepted", handleAccepted);
       socketService.off("messageReceived", handleMessageReceived);
+      socketService.off("friendPostCreated", handleFriendPostCreated);
     };
   }, [currentUser]);
 
   useEffect(() => {
     if (currentUser) return;
     setLocalNotifications([]);
-    setMessageToast(null);
+    setNotificationToast(null);
     messageIdsRef.current.clear();
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
   }, [currentUser]);
@@ -172,7 +219,7 @@ export function useNotificationsState() {
     markNotificationsAsRead,
     removeNotification,
     markNotificationAsRead,
-    messageToast,
-    dismissMessageToast: () => setMessageToast(null),
+    notificationToast,
+    dismissNotificationToast: () => setNotificationToast(null),
   };
 }

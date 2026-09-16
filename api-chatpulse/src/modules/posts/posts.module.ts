@@ -8,6 +8,8 @@ import { Post, PostSchema } from "./schemas/post.schema";
 import { Comment, CommentSchema } from "./schemas/comment.schema";
 import { CloudinaryModule } from "../cloudinary/cloudinary.module";
 import { SharedModule } from "../../shared/shared.module";
+import { FriendsModule } from "../friends/friends.module";
+import { ChatModule } from "../chat/chat.module";
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { SharedModule } from "../../shared/shared.module";
     ]),
     CloudinaryModule,
     SharedModule,
+    FriendsModule,
+    ChatModule,
   ],
   controllers: [PostsController, CommentsController],
   providers: [PostsService, CommentsService],

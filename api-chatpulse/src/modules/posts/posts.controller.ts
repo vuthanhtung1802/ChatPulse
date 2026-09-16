@@ -18,11 +18,17 @@ import { CurrentUser, JwtAuthGuard } from "../../shared/shared.module";
 import { AuthUser } from "../../shared/interfaces/auth-user.interface";
 import { PaginationDto } from "../../shared/dto/pagination.dto";
 import type { Express } from "express";
+import { FriendsService } from "../friends/friends.service";
+import { ChatGateway } from "../chat/chat.gateway";
 
 @Controller("posts")
 @UseGuards(JwtAuthGuard)
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly friendsService: FriendsService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @Post()
   async create(
@@ -32,6 +38,11 @@ export class PostsController {
     const post = await this.postsService.create(
       user._id.toString(),
       createPostDto,
+    );
+    const friends = await this.friendsService.getFriends(user._id.toString());
+    this.chatGateway.notifyFriendsOfPost(
+      friends.map((friend) => friend._id.toString()),
+      post,
     );
     return { post };
   }

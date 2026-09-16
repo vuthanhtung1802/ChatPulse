@@ -9,11 +9,7 @@ import {
   WebSocketServer,
   WsException,
 } from "@nestjs/websockets";
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-} from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { Server, Socket } from "socket.io";
@@ -41,10 +37,7 @@ import { parseCorsOrigins } from "../../config/environment";
 })
 @Injectable()
 export class ChatGateway
-  implements
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnApplicationBootstrap
+  implements OnGatewayConnection, OnGatewayDisconnect, OnApplicationBootstrap
 {
   private readonly logger = new Logger(ChatGateway.name);
 
@@ -65,6 +58,12 @@ export class ChatGateway
 
   async onApplicationBootstrap(): Promise<void> {
     await this.usersService.resetAllStatuses();
+  }
+
+  notifyFriendsOfPost(friendIds: string[], post: unknown): void {
+    for (const friendId of friendIds) {
+      this.server.to(userRoom(friendId)).emit("friendPostCreated", { post });
+    }
   }
 
   notifyConversationCreated(conversation: ConversationDocument): void {
