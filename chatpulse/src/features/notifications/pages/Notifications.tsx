@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../NotificationsContext";
 import { useFriends } from "../../friends/FriendsContext";
 import {
@@ -6,20 +7,29 @@ import {
   MessageSquare,
   Heart,
   AtSign,
-  Settings,
   Check,
   Trash2,
   AlertCircle,
   UserPlus,
   UserCheck,
   UserX,
+  X,
 } from "lucide-react";
 import { NotificationItem } from "../../../types/Notification";
+import { useChat } from "../../chat/ChatContext";
 
 export const Notifications: React.FC = () => {
-  const { notifications, markNotificationsAsRead, removeNotification } =
-    useNotifications();
+  const [notificationToDelete, setNotificationToDelete] =
+    useState<NotificationItem | null>(null);
+  const {
+    notifications,
+    markNotificationsAsRead,
+    markNotificationAsRead,
+    removeNotification,
+  } = useNotifications();
   const { acceptRequest, declineRequest } = useFriends();
+  const { setActiveConversationId } = useChat();
+  const navigate = useNavigate();
 
   const handleMarkAllRead = () => {
     markNotificationsAsRead();
@@ -52,6 +62,19 @@ export const Notifications: React.FC = () => {
     if (!notif.requestId) return;
     declineRequest(notif.requestId);
     removeNotification(notif.id);
+  };
+
+  const handleOpenMessage = (notification: NotificationItem) => {
+    if (!notification.conversationId) return;
+    setActiveConversationId(notification.conversationId);
+    markNotificationAsRead(notification.id);
+    navigate("/messages");
+  };
+
+  const handleConfirmDelete = () => {
+    if (!notificationToDelete) return;
+    removeNotification(notificationToDelete.id);
+    setNotificationToDelete(null);
   };
 
   return (
@@ -115,6 +138,17 @@ export const Notifications: React.FC = () => {
                       {notif.description}
                     </p>
 
+                    {notif.type === "message" && notif.conversationId && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMessage(notif)}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary-container px-3 py-1.5 text-[11px] font-semibold text-on-primary-container transition-colors hover:bg-primary hover:text-on-primary"
+                      >
+                        <MessageSquare size={12} />
+                        Open conversation
+                      </button>
+                    )}
+
                     {/* Friend request actions */}
                     {notif.type === "friend" && notif.requestId && (
                       <div className="flex items-center gap-2 pt-2">
@@ -136,10 +170,23 @@ export const Notifications: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Unread dot */}
-                  {notif.unread && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                  )}
+                  <div className="flex shrink-0 items-center gap-2 self-center">
+                    {notif.unread && (
+                      <span
+                        className="h-2 w-2 rounded-full bg-primary"
+                        aria-label="Unread"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setNotificationToDelete(notif)}
+                      className="rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-error-container hover:text-error"
+                      aria-label={`Delete notification: ${notif.title}`}
+                      title="Delete notification"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -158,6 +205,62 @@ export const Notifications: React.FC = () => {
           )}
         </div>
       </div>
+
+      {notificationToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-notification-title"
+        >
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-2xl">
+            <div className="flex items-start justify-between px-5 pb-3 pt-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-error-container text-error">
+                <Trash2 size={20} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotificationToDelete(null)}
+                className="rounded-xl p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                aria-label="Close confirmation"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 pb-5">
+              <h3
+                id="delete-notification-title"
+                className="font-display text-lg font-bold text-on-surface"
+              >
+                Delete this notification?
+              </h3>
+              <p className="mt-2 text-sm leading-5 text-on-surface-variant">
+                “{notificationToDelete.title}” will be removed from your
+                notification list.
+              </p>
+            </div>
+
+            <div className="flex gap-3 border-t border-outline-variant/60 bg-surface-container-low/60 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setNotificationToDelete(null)}
+                className="flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-error px-4 py-2.5 text-sm font-semibold text-on-error transition-opacity hover:opacity-90"
+              >
+                <Trash2 size={15} />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
